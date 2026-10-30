@@ -1,0 +1,90 @@
+  bash arg: -p
+  bash arg: com.polylingua.edge
+  bash arg: --pct-syskeys
+  bash arg: 0
+  bash arg: --pct-appswitch
+  bash arg: 0
+  bash arg: --pct-anyevent
+  bash arg: 0
+  bash arg: --throttle
+  bash arg: 200
+  bash arg: -s
+  bash arg: 4107
+  bash arg: -v
+  bash arg: 1200
+args: [-p, com.polylingua.edge, --pct-syskeys, 0, --pct-appswitch, 0, --pct-anyevent, 0, --throttle, 200, -s, 4107, -v, 1200]
+ arg: "-p"
+ arg: "com.polylingua.edge"
+ arg: "--pct-syskeys"
+ arg: "0"
+ arg: "--pct-appswitch"
+ arg: "0"
+ arg: "--pct-anyevent"
+ arg: "0"
+ arg: "--throttle"
+ arg: "200"
+ arg: "-s"
+ arg: "4107"
+ arg: "-v"
+ arg: "1200"
+data="com.polylingua.edge"
+arg="--pct-syskeys" mCurArgData="null" mNextArg=3 argwas="--pct-syskeys" nextarg="0"
+data="0"
+arg="--pct-appswitch" mCurArgData="null" mNextArg=5 argwas="--pct-appswitch" nextarg="0"
+data="0"
+arg="--pct-anyevent" mCurArgData="null" mNextArg=7 argwas="--pct-anyevent" nextarg="0"
+data="0"
+arg="--throttle" mCurArgData="null" mNextArg=9 argwas="--throttle" nextarg="200"
+data="200"
+data="4107"
+:Monkey: seed=4107 count=1200
+:AllowPackage: com.polylingua.edge
+:IncludeCategory: android.intent.category.LAUNCHER
+:IncludeCategory: android.intent.category.MONKEY
+// Event percentages:
+//   0: 18.07229%
+//   1: 12.048193%
+//   2: 2.4096386%
+//   3: 18.07229%
+//   4: -0.0%
+//   5: -0.0%
+//   6: 30.120483%
+//   7: 18.07229%
+//   8: -0.0%
+//   9: -0.0%
+//   10: 1.2048193%
+//   11: -0.0%
+:Switch: #Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;launchFlags=0x10200000;component=com.polylingua.edge/.MainActivity;end
+    // Allowing start of Intent { act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] cmp=com.polylingua.edge/.MainActivity } in package com.polylingua.edge
+    // Rejecting start of Intent { act=android.settings.APPLICATION_DETAILS_SETTINGS dat=package:com.polylingua.edge cmp=com.android.settings/.applications.InstalledAppDetails } in package com.android.settings
+// CRASH: com.polylingua.edge (pid 6498)
+// Short Msg: Native crash
+// Long Msg: Native crash: Segmentation fault
+// Build Label: google/sdk_gphone_x86_64/generic_x86_64_arm64:11/RSR1.240422.006/12134477:userdebug/dev-keys
+// Build Changelist: 12134477
+// Build Time: 1721854889000
+// *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+// Build fingerprint: 'google/sdk_gphone_x86_64/generic_x86_64_arm64:11/RSR1.240422.006/12134477:userdebug/dev-keys'
+// Revision: '0'
+// ABI: 'x86_64'
+// Timestamp: 2026-10-30 10:16:24+0000
+// pid: 6498, tid: 6528, name: pl-a55-dsp-1  >>> com.polylingua.edge <<<
+// uid: 10167
+// signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x8
+// Cause: null pointer dereference
+//     rax 0000000000080000  rbx 0000000000000000  rcx 00000000007042b8  rdx 00007042ba81a620
+//     r8  0000000000000001  r9  0000704787be1894  r10 0000000000000000  r11 0000000000000300
+//     r12 0000000000000000  r13 0000704767ba54f0  r14 0000000000000000  r15 0000000000000000
+//     rdi 0000000000000000  rsi 0000000000000000
+//     rbp 000070470d6ff050  rsp 00007042baa2aeb0  rip 00007042c026a184
+// 
+// backtrace:
+//       #00 pc 0000000000330184  <anonymous:7042bff3a000>
+// 
+    // Injection Failed
+** Monkey aborted due to error.
+Events injected: 6
+:Sending rotation degree=0, persist=false
+:Dropped: keys=1 pointers=0 trackballs=0 flips=0 rotations=0
+## Network stats: elapsed time=1158ms (0ms mobile, 0ms wifi, 1158ms not connected)
+** System appears to have crashed at event 6 of 1200 using seed 4107

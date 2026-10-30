@@ -1,3 +1,2 @@
 Performing Streamed Install
-adb: failed to install apk/PolyLingua_POCO_M4_Pro_Release.apk: Failure [INSTALL_FAILED_NO_MATCHING_ABIS: INSTALL_FAILED_NO_MATCHING_ABIS: Failed to extract native libraries, res=-113]
-
+Success

@@ -1,6 +1,32 @@
-x86_64
+x86_64,x86,arm64-v8a,armeabi-v7a,armeabi
+libndk_translation.so
 == install
-Performing Streamed Install
-adb: failed to install apk/PolyLingua_POCO_M4_Pro_Release.apk: Failure [INSTALL_FAILED_NO_MATCHING_ABIS: INSTALL_FAILED_NO_MATCHING_ABIS: Failed to extract native libraries, res=-113]
-
-RESULT: FAIL (install)
+== cold start
+Starting: Intent { cmp=com.polylingua.edge/.MainActivity }
+Status: ok
+LaunchState: COLD
+Activity: com.polylingua.edge/.MainActivity
+TotalTime: 2073
+WaitTime: 2080
+Complete
+screen 01_home: PROCESS DEAD
+screen 02_setup: PROCESS DEAD
+screen 03_arena_drill_caseId_-1: PROCESS DEAD
+screen 04_arena_mock_caseId_-1: PROCESS DEAD
+screen 05_elsa_caseId_-1: PROCESS DEAD
+screen 06_tandem: PROCESS DEAD
+screen 07_cake: PROCESS DEAD
+screen 08_quiz_quiz_packages_: PROCESS DEAD
+screen 09_quiz_flash_packages_: PROCESS DEAD
+screen 10_dashboard: PROCESS DEAD
+screen 11_home: PROCESS DEAD
+== memory
+== monkey stress (1200 events)
+Events injected: 6
+:Sending rotation degree=0, persist=false
+:Dropped: keys=1 pointers=0 trackballs=0 flips=0 rotations=0
+## Network stats: elapsed time=1158ms (0ms mobile, 0ms wifi, 1158ms not connected)
+** System appears to have crashed at event 6 of 1200 using seed 4107
+screen 99_after_monkey: PROCESS DEAD
+fatal/anr in logcat: 12 · monkey crash markers: 1
+RESULT: FAIL
