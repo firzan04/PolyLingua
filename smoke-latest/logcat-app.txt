@@ -1,238 +1,37 @@
-10-30 10:14:39.234  3101  3127 E libc    : Access denied finding property "persist.adb.tls_server.enable"
-10-30 10:14:39.234  3101  3127 E libc    : Access denied finding property "service.adb.tls.port"
-10-30 10:14:44.063  5255  5292 E libc    : Access denied finding property "ro.hardware.chipname"
-10-30 10:14:44.525  5255  5292 F libc    : Fatal signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x8 in tid 5292 (pl-a55-dsp-1), pid 5255 (polylingua.edge)
-10-30 10:14:44.886  5326  5326 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
-10-30 10:14:44.886  5326  5326 F DEBUG   : Build fingerprint: 'google/sdk_gphone_x86_64/generic_x86_64_arm64:11/RSR1.240422.006/12134477:userdebug/dev-keys'
-10-30 10:14:44.886  5326  5326 F DEBUG   : Revision: '0'
-10-30 10:14:44.886  5326  5326 F DEBUG   : ABI: 'x86_64'
-10-30 10:14:44.890  5326  5326 F DEBUG   : Timestamp: 2026-10-30 10:14:44+0000
-10-30 10:14:44.890  5326  5326 F DEBUG   : pid: 5255, tid: 5292, name: pl-a55-dsp-1  >>> com.polylingua.edge <<<
-10-30 10:14:44.890  5326  5326 F DEBUG   : uid: 10167
-10-30 10:14:44.890  5326  5326 F DEBUG   : signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x8
-10-30 10:14:44.890  5326  5326 F DEBUG   : Cause: null pointer dereference
-10-30 10:14:44.890  5326  5326 F DEBUG   :     rax 0000000000080000  rbx 0000000000000000  rcx 00000000007042b8  rdx 00007042bae6b620
-10-30 10:14:44.890  5326  5326 F DEBUG   :     r8  0000000000000001  r9  0000704787bf3f54  r10 0000000000000000  r11 0000000000000300
-10-30 10:14:44.890  5326  5326 F DEBUG   :     r12 0000000000000000  r13 0000704767ba6a50  r14 0000000000000000  r15 0000000000000000
-10-30 10:14:44.890  5326  5326 F DEBUG   :     rdi 0000000000000000  rsi 0000000000000000
-10-30 10:14:44.890  5326  5326 F DEBUG   :     rbp 000070470ef41050  rsp 00007042baf71eb0  rip 00007042c026a3da
-10-30 10:14:44.983  5326  5326 F DEBUG   : backtrace:
-10-30 10:14:44.983  5326  5326 F DEBUG   :       #00 pc 00000000003303da  <anonymous:7042bff3a000>
-10-30 10:14:47.511   420   420 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
-10-30 10:15:10.601  5485  5509 E libc    : Access denied finding property "ro.hardware.chipname"
-10-30 10:15:10.631  5485  5509 F libc    : Fatal signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x8 in tid 5509 (pl-a55-dsp-1), pid 5485 (polylingua.edge)
-10-30 10:15:10.658  5523  5523 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
-10-30 10:15:10.658  5523  5523 F DEBUG   : Build fingerprint: 'google/sdk_gphone_x86_64/generic_x86_64_arm64:11/RSR1.240422.006/12134477:userdebug/dev-keys'
-10-30 10:15:10.658  5523  5523 F DEBUG   : Revision: '0'
-10-30 10:15:10.658  5523  5523 F DEBUG   : ABI: 'x86_64'
-10-30 10:15:10.658  5523  5523 F DEBUG   : Timestamp: 2026-10-30 10:15:10+0000
-10-30 10:15:10.658  5523  5523 F DEBUG   : pid: 5485, tid: 5509, name: pl-a55-dsp-1  >>> com.polylingua.edge <<<
-10-30 10:15:10.658  5523  5523 F DEBUG   : uid: 10167
-10-30 10:15:10.658  5523  5523 F DEBUG   : signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x8
-10-30 10:15:10.658  5523  5523 F DEBUG   : Cause: null pointer dereference
-10-30 10:15:10.658  5523  5523 F DEBUG   :     rax 0000000000080000  rbx 0000000000000000  rcx 00000000007042b9  rdx 00007042baf4a620
-10-30 10:15:10.658  5523  5523 F DEBUG   :     r8  0000000000000001  r9  0000704787bd3ca4  r10 0000000000000000  r11 0000000000000300
-10-30 10:15:10.658  5523  5523 F DEBUG   :     r12 0000000000000000  r13 0000704767ba3810  r14 0000000000000000  r15 0000000000000000
-10-30 10:15:10.658  5523  5523 F DEBUG   :     rdi 0000000000000000  rsi 0000000000000000
-10-30 10:15:10.658  5523  5523 F DEBUG   :     rbp 000070470efda050  rsp 00007042bb050eb0  rip 00007042c026a184
-10-30 10:15:10.688  5523  5523 F DEBUG   : backtrace:
-10-30 10:15:10.688  5523  5523 F DEBUG   :       #00 pc 0000000000330184  <anonymous:7042bff3a000>
-10-30 10:15:15.121   420   420 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
-10-30 10:15:18.079  5551  5581 E libc    : Access denied finding property "ro.hardware.chipname"
-10-30 10:15:18.126  5551  5581 F libc    : Fatal signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x8 in tid 5581 (pl-a55-dsp-1), pid 5551 (polylingua.edge)
-10-30 10:15:18.223  5675  5675 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
-10-30 10:15:18.223  5675  5675 F DEBUG   : Build fingerprint: 'google/sdk_gphone_x86_64/generic_x86_64_arm64:11/RSR1.240422.006/12134477:userdebug/dev-keys'
-10-30 10:15:18.223  5675  5675 F DEBUG   : Revision: '0'
-10-30 10:15:18.223  5675  5675 F DEBUG   : ABI: 'x86_64'
-10-30 10:15:18.223  5675  5675 F DEBUG   : Timestamp: 2026-10-30 10:15:18+0000
-10-30 10:15:18.223  5675  5675 F DEBUG   : pid: 5551, tid: 5581, name: pl-a55-dsp-1  >>> com.polylingua.edge <<<
-10-30 10:15:18.223  5675  5675 F DEBUG   : uid: 10167
-10-30 10:15:18.223  5675  5675 F DEBUG   : signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x8
-10-30 10:15:18.223  5675  5675 F DEBUG   : Cause: null pointer dereference
-10-30 10:15:18.223  5675  5675 F DEBUG   :     rax 0000000000080000  rbx 0000000000000000  rcx 00000000007042b9  rdx 00007042badf4620
-10-30 10:15:18.223  5675  5675 F DEBUG   :     r8  0000000000000001  r9  0000704787bd5ef4  r10 0000000000000000  r11 0000000000000300
-10-30 10:15:18.223  5675  5675 F DEBUG   :     r12 0000000000000000  r13 0000704767ba4ef0  r14 0000000000000000  r15 0000000000000000
-10-30 10:15:18.223  5675  5675 F DEBUG   :     rdi 0000000000000000  rsi 0000000000000000
-10-30 10:15:18.223  5675  5675 F DEBUG   :     rbp 000070470efda050  rsp 00007042bb0f6eb0  rip 00007042c026a3da
-10-30 10:15:18.369  5675  5675 F DEBUG   : backtrace:
-10-30 10:15:18.369  5675  5675 F DEBUG   :       #00 pc 00000000003303da  <anonymous:7042bff3a000>
-10-30 10:15:22.491   420   420 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
-10-30 10:15:25.463  5800  5825 E libc    : Access denied finding property "ro.hardware.chipname"
-10-30 10:15:25.490  5800  5825 F libc    : Fatal signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x8 in tid 5825 (pl-a55-dsp-1), pid 5800 (polylingua.edge)
-10-30 10:15:25.527  5842  5842 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
-10-30 10:15:25.527  5842  5842 F DEBUG   : Build fingerprint: 'google/sdk_gphone_x86_64/generic_x86_64_arm64:11/RSR1.240422.006/12134477:userdebug/dev-keys'
-10-30 10:15:25.527  5842  5842 F DEBUG   : Revision: '0'
-10-30 10:15:25.527  5842  5842 F DEBUG   : ABI: 'x86_64'
-10-30 10:15:25.527  5842  5842 F DEBUG   : Timestamp: 2026-10-30 10:15:25+0000
-10-30 10:15:25.527  5842  5842 F DEBUG   : pid: 5800, tid: 5825, name: pl-a55-dsp-1  >>> com.polylingua.edge <<<
-10-30 10:15:25.527  5842  5842 F DEBUG   : uid: 10167
-10-30 10:15:25.527  5842  5842 F DEBUG   : signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x8
-10-30 10:15:25.527  5842  5842 F DEBUG   : Cause: null pointer dereference
-10-30 10:15:25.527  5842  5842 F DEBUG   :     rax 0000000000080000  rbx 0000000000000000  rcx 00000000007042b9  rdx 00007042bae80620
-10-30 10:15:25.527  5842  5842 F DEBUG   :     r8  0000000000000001  r9  0000704787be1534  r10 0000000000000000  r11 0000000000000300
-10-30 10:15:25.527  5842  5842 F DEBUG   :     r12 0000000000000000  r13 0000704767ba4d10  r14 0000000000000000  r15 0000000000000000
-10-30 10:15:25.527  5842  5842 F DEBUG   :     rdi 0000000000000000  rsi 0000000000000000
-10-30 10:15:25.527  5842  5842 F DEBUG   :     rbp 000070470ef9e050  rsp 00007042baf86eb0  rip 00007042c026a3da
-10-30 10:15:25.633  5842  5842 F DEBUG   : backtrace:
-10-30 10:15:25.633  5842  5842 F DEBUG   :       #00 pc 00000000003303da  <anonymous:7042bff3a000>
-10-30 10:15:29.860   420   420 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
-10-30 10:15:32.781  5899  5923 E libc    : Access denied finding property "ro.hardware.chipname"
-10-30 10:15:32.809  5899  5923 F libc    : Fatal signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x8 in tid 5923 (pl-a55-dsp-1), pid 5899 (polylingua.edge)
-10-30 10:15:32.839  5938  5938 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
-10-30 10:15:32.839  5938  5938 F DEBUG   : Build fingerprint: 'google/sdk_gphone_x86_64/generic_x86_64_arm64:11/RSR1.240422.006/12134477:userdebug/dev-keys'
-10-30 10:15:32.839  5938  5938 F DEBUG   : Revision: '0'
-10-30 10:15:32.839  5938  5938 F DEBUG   : ABI: 'x86_64'
-10-30 10:15:32.839  5938  5938 F DEBUG   : Timestamp: 2026-10-30 10:15:32+0000
-10-30 10:15:32.839  5938  5938 F DEBUG   : pid: 5899, tid: 5923, name: pl-a55-dsp-1  >>> com.polylingua.edge <<<
-10-30 10:15:32.839  5938  5938 F DEBUG   : uid: 10167
-10-30 10:15:32.839  5938  5938 F DEBUG   : signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x8
-10-30 10:15:32.839  5938  5938 F DEBUG   : Cause: null pointer dereference
-10-30 10:15:32.839  5938  5938 F DEBUG   :     rax 0000000000080000  rbx 0000000000000000  rcx 00000000007042b9  rdx 00007042baf63620
-10-30 10:15:32.839  5938  5938 F DEBUG   :     r8  0000000000000001  r9  0000704787bd03d4  r10 0000000000000000  r11 0000000000000300
-10-30 10:15:32.839  5938  5938 F DEBUG   :     r12 0000000000000000  r13 0000704767ba0450  r14 0000000000000000  r15 0000000000000000
-10-30 10:15:32.839  5938  5938 F DEBUG   :     rdi 0000000000000000  rsi 0000000000000000
-10-30 10:15:32.839  5938  5938 F DEBUG   :     rbp 000070470ef9e050  rsp 00007042bb069eb0  rip 00007042c026a3da
-10-30 10:15:32.868  5938  5938 F DEBUG   : backtrace:
-10-30 10:15:32.868  5938  5938 F DEBUG   :       #00 pc 00000000003303da  <anonymous:7042bff3a000>
-10-30 10:15:37.227   420   420 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
-10-30 10:15:40.955  6056  6093 E libc    : Access denied finding property "ro.hardware.chipname"
-10-30 10:15:41.004  6056  6093 F libc    : Fatal signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x8 in tid 6093 (pl-a55-dsp-1), pid 6056 (polylingua.edge)
-10-30 10:15:41.054  6113  6113 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
-10-30 10:15:41.054  6113  6113 F DEBUG   : Build fingerprint: 'google/sdk_gphone_x86_64/generic_x86_64_arm64:11/RSR1.240422.006/12134477:userdebug/dev-keys'
-10-30 10:15:41.054  6113  6113 F DEBUG   : Revision: '0'
-10-30 10:15:41.054  6113  6113 F DEBUG   : ABI: 'x86_64'
-10-30 10:15:41.055  6113  6113 F DEBUG   : Timestamp: 2026-10-30 10:15:41+0000
-10-30 10:15:41.055  6113  6113 F DEBUG   : pid: 6056, tid: 6093, name: pl-a55-dsp-1  >>> com.polylingua.edge <<<
-10-30 10:15:41.055  6113  6113 F DEBUG   : uid: 10167
-10-30 10:15:41.055  6113  6113 F DEBUG   : signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x8
-10-30 10:15:41.055  6113  6113 F DEBUG   : Cause: null pointer dereference
-10-30 10:15:41.055  6113  6113 F DEBUG   :     rax 0000000000080000  rbx 0000000000000000  rcx 00000000007042b9  rdx 00007042baf51620
-10-30 10:15:41.055  6113  6113 F DEBUG   :     r8  0000000000000001  r9  0000704787bebfa4  r10 0000000000000000  r11 0000000000000300
-10-30 10:15:41.055  6113  6113 F DEBUG   :     r12 0000000000000000  r13 0000704767babd90  r14 0000000000000000  r15 0000000000000000
-10-30 10:15:41.055  6113  6113 F DEBUG   :     rdi 0000000000000000  rsi 0000000000000000
-10-30 10:15:41.055  6113  6113 F DEBUG   :     rbp 000070470efda050  rsp 00007042bb057eb0  rip 00007042c026a92f
-10-30 10:15:41.088  6113  6113 F DEBUG   : backtrace:
-10-30 10:15:41.088  6113  6113 F DEBUG   :       #00 pc 000000000033092f  <anonymous:7042bff3a000>
-10-30 10:15:44.697   420   420 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
-10-30 10:15:47.690  6143  6167 E libc    : Access denied finding property "ro.hardware.chipname"
-10-30 10:15:47.718  6143  6167 F libc    : Fatal signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x8 in tid 6167 (pl-a55-dsp-1), pid 6143 (polylingua.edge)
-10-30 10:15:47.751  6183  6183 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
-10-30 10:15:47.751  6183  6183 F DEBUG   : Build fingerprint: 'google/sdk_gphone_x86_64/generic_x86_64_arm64:11/RSR1.240422.006/12134477:userdebug/dev-keys'
-10-30 10:15:47.751  6183  6183 F DEBUG   : Revision: '0'
-10-30 10:15:47.751  6183  6183 F DEBUG   : ABI: 'x86_64'
-10-30 10:15:47.751  6183  6183 F DEBUG   : Timestamp: 2026-10-30 10:15:47+0000
-10-30 10:15:47.751  6183  6183 F DEBUG   : pid: 6143, tid: 6167, name: pl-a55-dsp-1  >>> com.polylingua.edge <<<
-10-30 10:15:47.751  6183  6183 F DEBUG   : uid: 10167
-10-30 10:15:47.751  6183  6183 F DEBUG   : signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x8
-10-30 10:15:47.751  6183  6183 F DEBUG   : Cause: null pointer dereference
-10-30 10:15:47.751  6183  6183 F DEBUG   :     rax 0000000000080000  rbx 0000000000000000  rcx 00000000007042b8  rdx 00007042bac6f620
-10-30 10:15:47.751  6183  6183 F DEBUG   :     r8  0000000000000001  r9  0000704787bd2114  r10 0000000000000000  r11 0000000000000300
-10-30 10:15:47.751  6183  6183 F DEBUG   :     r12 0000000000000000  r13 0000704767ba1530  r14 0000000000000000  r15 0000000000000000
-10-30 10:15:47.751  6183  6183 F DEBUG   :     rdi 0000000000000000  rsi 0000000000000000
-10-30 10:15:47.751  6183  6183 F DEBUG   :     rbp 000070470ef9e050  rsp 00007042bb06feb0  rip 00007042c026a92f
-10-30 10:15:47.836  6183  6183 F DEBUG   : backtrace:
-10-30 10:15:47.836  6183  6183 F DEBUG   :       #00 pc 000000000033092f  <anonymous:7042bff3a000>
-10-30 10:15:52.084   420   420 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
-10-30 10:15:54.995  6211  6236 E libc    : Access denied finding property "ro.hardware.chipname"
-10-30 10:15:55.030  6211  6236 F libc    : Fatal signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x8 in tid 6236 (pl-a55-dsp-1), pid 6211 (polylingua.edge)
-10-30 10:15:55.051  6248  6248 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
-10-30 10:15:55.051  6248  6248 F DEBUG   : Build fingerprint: 'google/sdk_gphone_x86_64/generic_x86_64_arm64:11/RSR1.240422.006/12134477:userdebug/dev-keys'
-10-30 10:15:55.051  6248  6248 F DEBUG   : Revision: '0'
-10-30 10:15:55.051  6248  6248 F DEBUG   : ABI: 'x86_64'
-10-30 10:15:55.051  6248  6248 F DEBUG   : Timestamp: 2026-10-30 10:15:55+0000
-10-30 10:15:55.051  6248  6248 F DEBUG   : pid: 6211, tid: 6236, name: pl-a55-dsp-1  >>> com.polylingua.edge <<<
-10-30 10:15:55.051  6248  6248 F DEBUG   : uid: 10167
-10-30 10:15:55.051  6248  6248 F DEBUG   : signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x8
-10-30 10:15:55.051  6248  6248 F DEBUG   : Cause: null pointer dereference
-10-30 10:15:55.051  6248  6248 F DEBUG   :     rax 0000000000080000  rbx 0000000000000000  rcx 00000000007042b9  rdx 00007042bae3a620
-10-30 10:15:55.051  6248  6248 F DEBUG   :     r8  0000000000000001  r9  0000704787b9d8b4  r10 0000000000000000  r11 0000000000000300
-10-30 10:15:55.051  6248  6248 F DEBUG   :     r12 0000000000000000  r13 0000704767ba27f0  r14 0000000000000000  r15 0000000000000000
-10-30 10:15:55.051  6248  6248 F DEBUG   :     rdi 0000000000000000  rsi 0000000000000000
-10-30 10:15:55.051  6248  6248 F DEBUG   :     rbp 000070470ef9e050  rsp 00007042baf40eb0  rip 00007042c026a92f
-10-30 10:15:55.080  6248  6248 F DEBUG   : backtrace:
-10-30 10:15:55.080  6248  6248 F DEBUG   :       #00 pc 000000000033092f  <anonymous:7042bff3a000>
-10-30 10:15:59.487   420   420 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
-10-30 10:16:02.359  6279  6305 E libc    : Access denied finding property "ro.hardware.chipname"
-10-30 10:16:02.389  6279  6305 F libc    : Fatal signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x8 in tid 6305 (pl-a55-dsp-1), pid 6279 (polylingua.edge)
-10-30 10:16:02.410  6317  6317 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
-10-30 10:16:02.410  6317  6317 F DEBUG   : Build fingerprint: 'google/sdk_gphone_x86_64/generic_x86_64_arm64:11/RSR1.240422.006/12134477:userdebug/dev-keys'
-10-30 10:16:02.410  6317  6317 F DEBUG   : Revision: '0'
-10-30 10:16:02.410  6317  6317 F DEBUG   : ABI: 'x86_64'
-10-30 10:16:02.410  6317  6317 F DEBUG   : Timestamp: 2026-10-30 10:16:02+0000
-10-30 10:16:02.410  6317  6317 F DEBUG   : pid: 6279, tid: 6305, name: pl-a55-dsp-1  >>> com.polylingua.edge <<<
-10-30 10:16:02.410  6317  6317 F DEBUG   : uid: 10167
-10-30 10:16:02.410  6317  6317 F DEBUG   : signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x8
-10-30 10:16:02.410  6317  6317 F DEBUG   : Cause: null pointer dereference
-10-30 10:16:02.410  6317  6317 F DEBUG   :     rax 0000000000080000  rbx 0000000000000000  rcx 00000000007042b9  rdx 00007042bad16620
-10-30 10:16:02.410  6317  6317 F DEBUG   :     r8  0000000000000001  r9  0000704787bd58c4  r10 0000000000000000  r11 0000000000000300
-10-30 10:16:02.410  6317  6317 F DEBUG   :     r12 0000000000000000  r13 0000704767ba3930  r14 0000000000000000  r15 0000000000000000
-10-30 10:16:02.410  6317  6317 F DEBUG   :     rdi 0000000000000000  rsi 0000000000000000
-10-30 10:16:02.410  6317  6317 F DEBUG   :     rbp 000070470ef7a050  rsp 00007042bae1ceb0  rip 00007042c026a3da
-10-30 10:16:02.439  6317  6317 F DEBUG   : backtrace:
-10-30 10:16:02.439  6317  6317 F DEBUG   :       #00 pc 00000000003303da  <anonymous:7042bff3a000>
-10-30 10:16:02.504   420   420 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
-10-30 10:16:09.854  6346  6371 E libc    : Access denied finding property "ro.hardware.chipname"
-10-30 10:16:09.881  6346  6371 F libc    : Fatal signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x8 in tid 6371 (pl-a55-dsp-1), pid 6346 (polylingua.edge)
-10-30 10:16:09.902  6385  6385 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
-10-30 10:16:09.902  6385  6385 F DEBUG   : Build fingerprint: 'google/sdk_gphone_x86_64/generic_x86_64_arm64:11/RSR1.240422.006/12134477:userdebug/dev-keys'
-10-30 10:16:09.902  6385  6385 F DEBUG   : Revision: '0'
-10-30 10:16:09.902  6385  6385 F DEBUG   : ABI: 'x86_64'
-10-30 10:16:09.902  6385  6385 F DEBUG   : Timestamp: 2026-10-30 10:16:09+0000
-10-30 10:16:09.902  6385  6385 F DEBUG   : pid: 6346, tid: 6371, name: pl-a55-dsp-1  >>> com.polylingua.edge <<<
-10-30 10:16:09.902  6385  6385 F DEBUG   : uid: 10167
-10-30 10:16:09.902  6385  6385 F DEBUG   : signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x8
-10-30 10:16:09.902  6385  6385 F DEBUG   : Cause: null pointer dereference
-10-30 10:16:09.902  6385  6385 F DEBUG   :     rax 0000000000080000  rbx 0000000000000000  rcx 00000000007042b9  rdx 00007042bae11620
-10-30 10:16:09.902  6385  6385 F DEBUG   :     r8  0000000000000001  r9  0000704787bd0b24  r10 0000000000000000  r11 0000000000000300
-10-30 10:16:09.902  6385  6385 F DEBUG   :     r12 0000000000000000  r13 0000704767ba5370  r14 0000000000000000  r15 0000000000000000
-10-30 10:16:09.902  6385  6385 F DEBUG   :     rdi 0000000000000000  rsi 0000000000000000
-10-30 10:16:09.902  6385  6385 F DEBUG   :     rbp 000070470efda050  rsp 00007042baf17eb0  rip 00007042c026a3da
-10-30 10:16:09.989  6385  6385 F DEBUG   : backtrace:
-10-30 10:16:09.990  6385  6385 F DEBUG   :       #00 pc 00000000003303da  <anonymous:7042bff3a000>
-10-30 10:16:14.241   420   420 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
-10-30 10:16:17.159  6414  6439 E libc    : Access denied finding property "ro.hardware.chipname"
-10-30 10:16:17.189  6414  6439 F libc    : Fatal signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x8 in tid 6439 (pl-a55-dsp-1), pid 6414 (polylingua.edge)
-10-30 10:16:17.218  6452  6452 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
-10-30 10:16:17.218  6452  6452 F DEBUG   : Build fingerprint: 'google/sdk_gphone_x86_64/generic_x86_64_arm64:11/RSR1.240422.006/12134477:userdebug/dev-keys'
-10-30 10:16:17.218  6452  6452 F DEBUG   : Revision: '0'
-10-30 10:16:17.218  6452  6452 F DEBUG   : ABI: 'x86_64'
-10-30 10:16:17.218  6452  6452 F DEBUG   : Timestamp: 2026-10-30 10:16:17+0000
-10-30 10:16:17.218  6452  6452 F DEBUG   : pid: 6414, tid: 6439, name: pl-a55-dsp-1  >>> com.polylingua.edge <<<
-10-30 10:16:17.218  6452  6452 F DEBUG   : uid: 10167
-10-30 10:16:17.218  6452  6452 F DEBUG   : signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x8
-10-30 10:16:17.218  6452  6452 F DEBUG   : Cause: null pointer dereference
-10-30 10:16:17.219  6452  6452 F DEBUG   :     rax 0000000000080000  rbx 0000000000000000  rcx 00000000007042b9  rdx 00007042bae31620
-10-30 10:16:17.219  6452  6452 F DEBUG   :     r8  0000000000000001  r9  0000704787bd4634  r10 0000000000000000  r11 0000000000000300
-10-30 10:16:17.219  6452  6452 F DEBUG   :     r12 0000000000000000  r13 0000704767ba1410  r14 0000000000000000  r15 0000000000000000
-10-30 10:16:17.219  6452  6452 F DEBUG   :     rdi 0000000000000000  rsi 0000000000000000
-10-30 10:16:17.219  6452  6452 F DEBUG   :     rbp 000070470ef7a050  rsp 00007042baf37eb0  rip 00007042c026a6d9
-10-30 10:16:17.247  6452  6452 F DEBUG   : backtrace:
-10-30 10:16:17.247  6452  6452 F DEBUG   :       #00 pc 00000000003306d9  <anonymous:7042bff3a000>
-10-30 10:16:21.631   420   420 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
-10-30 10:16:24.073  6479  6479 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
-10-30 10:16:24.074  6479  6479 E libc    : Access denied finding property "persist.device_config.runtime_native_boot.profilebootclasspath"
-10-30 10:16:24.074  6479  6479 E libc    : Access denied finding property "persist.device_config.runtime_native_boot.enable_apex_image"
-10-30 10:16:24.074  6479  6479 I AndroidRuntime: Using default boot image
-10-30 10:16:24.074  6479  6479 E libc    : Access denied finding property "persist.device_config.runtime_native_boot.disable_lock_profiling"
-10-30 10:16:24.074  6479  6479 I AndroidRuntime: Leaving lock profiling enabled
-10-30 10:16:24.074  6479  6479 E libc    : Access denied finding property "persist.device_config.runtime_native_boot.enable_generational_cc"
-10-30 10:16:24.128  6479  6479 D AndroidRuntime: Calling main entry com.android.commands.monkey.Monkey
-10-30 10:16:24.867  6498  6528 E libc    : Access denied finding property "ro.hardware.chipname"
-10-30 10:16:24.896  6498  6528 F libc    : Fatal signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x8 in tid 6528 (pl-a55-dsp-1), pid 6498 (polylingua.edge)
-10-30 10:16:24.926  6538  6538 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
-10-30 10:16:24.926  6538  6538 F DEBUG   : Build fingerprint: 'google/sdk_gphone_x86_64/generic_x86_64_arm64:11/RSR1.240422.006/12134477:userdebug/dev-keys'
-10-30 10:16:24.926  6538  6538 F DEBUG   : Revision: '0'
-10-30 10:16:24.926  6538  6538 F DEBUG   : ABI: 'x86_64'
-10-30 10:16:24.926  6538  6538 F DEBUG   : Timestamp: 2026-10-30 10:16:24+0000
-10-30 10:16:24.926  6538  6538 F DEBUG   : pid: 6498, tid: 6528, name: pl-a55-dsp-1  >>> com.polylingua.edge <<<
-10-30 10:16:24.926  6538  6538 F DEBUG   : uid: 10167
-10-30 10:16:24.927  6538  6538 F DEBUG   : signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x8
-10-30 10:16:24.927  6538  6538 F DEBUG   : Cause: null pointer dereference
-10-30 10:16:24.927  6538  6538 F DEBUG   :     rax 0000000000080000  rbx 0000000000000000  rcx 00000000007042b8  rdx 00007042ba81a620
-10-30 10:16:24.927  6538  6538 F DEBUG   :     r8  0000000000000001  r9  0000704787be1894  r10 0000000000000000  r11 0000000000000300
-10-30 10:16:24.927  6538  6538 F DEBUG   :     r12 0000000000000000  r13 0000704767ba54f0  r14 0000000000000000  r15 0000000000000000
-10-30 10:16:24.927  6538  6538 F DEBUG   :     rdi 0000000000000000  rsi 0000000000000000
-10-30 10:16:24.927  6538  6538 F DEBUG   :     rbp 000070470d6ff050  rsp 00007042baa2aeb0  rip 00007042c026a184
-10-30 10:16:24.988  6538  6538 F DEBUG   : backtrace:
-10-30 10:16:24.989  6538  6538 F DEBUG   :       #00 pc 0000000000330184  <anonymous:7042bff3a000>
-10-30 10:16:25.383  6479  6479 I AndroidRuntime: VM exiting with result code 6.
+10-30 10:24:40.164  5285  5320 W PolyLinguaNative: On-device AI runtime disabled: arm64 libraries cannot run natively on x86_64
+10-30 10:24:41.929  2815  5311 E libc    : Access denied finding property "persist.adb.tls_server.enable"
+10-30 10:24:41.929  2815  5311 E libc    : Access denied finding property "service.adb.tls.port"
+10-30 10:24:44.746   417   417 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
+10-30 10:25:12.132   417   417 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
+10-30 10:25:19.407   417   417 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
+10-30 10:25:26.677   417   417 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
+10-30 10:25:33.956   417   417 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
+10-30 10:25:39.525   417   417 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
+10-30 10:25:55.843   417   417 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
+10-30 10:26:03.132   417   417 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
+10-30 10:26:10.397   417   417 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
+10-30 10:26:17.649   417   417 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
+10-30 10:26:20.020  5950  5950 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 10:26:20.028  5950  5950 E libc    : Access denied finding property "persist.device_config.runtime_native_boot.profilebootclasspath"
+10-30 10:26:20.028  5950  5950 E libc    : Access denied finding property "persist.device_config.runtime_native_boot.enable_apex_image"
+10-30 10:26:20.028  5950  5950 I AndroidRuntime: Using default boot image
+10-30 10:26:20.028  5950  5950 E libc    : Access denied finding property "persist.device_config.runtime_native_boot.disable_lock_profiling"
+10-30 10:26:20.028  5950  5950 I AndroidRuntime: Leaving lock profiling enabled
+10-30 10:26:20.028  5950  5950 E libc    : Access denied finding property "persist.device_config.runtime_native_boot.enable_generational_cc"
+10-30 10:26:20.110  5950  5950 D AndroidRuntime: Calling main entry com.android.commands.monkey.Monkey
+10-30 10:26:25.137   417   417 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
+10-30 10:26:59.895  2815  2906 E libc    : Access denied finding property "persist.adb.tls_server.enable"
+10-30 10:26:59.895  2815  2906 E libc    : Access denied finding property "service.adb.tls.port"
+10-30 10:26:59.934   172   172 I libc    : Requested dump for tid 172 (Binder:172_2)
+10-30 10:26:59.982   284   284 I libc    : Requested dump for tid 284 (Binder:284_2)
+10-30 10:27:00.002   285   285 I libc    : Requested dump for tid 285 (Binder:285_3)
+10-30 10:27:00.093   351   351 I libc    : Requested dump for tid 351 (surfaceflinger)
+10-30 10:27:00.132   377   377 I libc    : Requested dump for tid 377 (audioserver)
+10-30 10:27:00.154   418   418 I libc    : Requested dump for tid 418 (cameraserver)
+10-30 10:27:00.180   419   419 I libc    : Requested dump for tid 419 (drmserver)
+10-30 10:27:00.210   433   433 I libc    : Requested dump for tid 433 (mediametrics)
+10-30 10:27:00.224   434   434 I libc    : Requested dump for tid 434 (mediaserver)
+10-30 10:27:00.296   693   693 I libc    : Requested dump for tid 693 (droid.bluetooth)
+10-30 10:27:00.716   494  6096 E ActivityManager: ANR in com.android.systemui
+10-30 10:27:00.717  5950  5962 W Monkey  : ANR in com.android.systemui
+10-30 10:27:06.574  5950  5950 I AndroidRuntime: VM exiting with result code 841.
