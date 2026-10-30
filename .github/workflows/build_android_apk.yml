@@ -9,7 +9,6 @@ on:
     branches: [ main ]
     paths-ignore:
       - '**.md'
-      - 'signaling-server/**'
   pull_request:
   workflow_dispatch:
 
@@ -128,7 +127,7 @@ jobs:
           - Signing: ${SIGNING_MODE} key
 
           Install: download **${APK_NAME}** on the phone and open it (allow "Install unknown apps" for your browser/file manager).
-          Speech/LLM models are downloaded once inside the app (Model Center) and then run fully offline.
+          Speech/LLM models are downloaded once inside the app (Models & settings) and then run fully offline.
           EOF
           gh release create "$TAG" "release-output/${APK_NAME}" "release-output/${APK_NAME}.sha256" \
             --title "PolyLingua Edge build ${GITHUB_RUN_NUMBER}" --notes-file release-notes.md --latest
@@ -156,4 +155,64 @@ jobs:
           cp "/tmp/failure-${GITHUB_RUN_NUMBER}.log" latest-failure.log
           git add "failure-${GITHUB_RUN_NUMBER}.log" latest-failure.log
           git commit -m "CI failure log for run ${GITHUB_RUN_NUMBER}" > /dev/null
+          git push origin ci-logs
+
+  smoke-test:
+    # Boots an Android 13 x86_64 emulator (ARM64 apps run through binary translation), opens every
+    # screen, runs a monkey stress pass and publishes screenshots + logcat to the ci-logs branch.
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: PolyLingua_POCO_M4_Pro_Release
+          path: apk
+
+      - name: Run emulator smoke test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          ram-size: 4096M
+          disk-size: 6000M
+          disable-animations: true
+          emulator-boot-timeout: 900
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          script: bash scripts/smoke_test.sh apk/${{ env.APK_NAME }} smoke-output
+
+      - name: Upload smoke-test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-${{ github.run_number }}
+          path: smoke-output/
+          retention-days: 14
+
+      - name: Publish smoke-test results to the ci-logs branch
+        if: always()
+        run: |
+          [ -d smoke-output ] || exit 0
+          git config user.name "polylingua-ci"
+          git config user.email "polylingua-ci@users.noreply.github.com"
+          mkdir -p /tmp/smoke && cp -r smoke-output/. /tmp/smoke/
+          rm -f /tmp/smoke/logcat-full.txt
+          git fetch origin ci-logs:ci-logs 2>/dev/null || true
+          if git show-ref --verify --quiet refs/heads/ci-logs; then git checkout -f ci-logs; else git checkout --orphan ci-logs && git rm -rf --cached . > /dev/null && rm -rf ./*; fi
+          rm -rf smoke-latest && mkdir -p smoke-latest && cp -r /tmp/smoke/. smoke-latest/
+          git add smoke-latest
+          git commit -m "Smoke test results for run ${GITHUB_RUN_NUMBER}" > /dev/null || true
           git push origin ci-logs

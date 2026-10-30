@@ -94,6 +94,9 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
             <!-- "Open with PolyLingua" for practice workbooks -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

@@ -22,6 +22,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,6 +37,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.polylingua.edge.ui.PendingRoute
 import com.polylingua.edge.ui.TelemetryViewModel
 import com.polylingua.edge.ui.components.PillBadge
 import com.polylingua.edge.ui.components.PolyIcons
@@ -69,6 +71,12 @@ object Routes {
 /** Root layout: global telemetry bar above an animated navigation host. */
 @Composable
 fun PolyLinguaRoot(nav: NavHostController = rememberNavController()) {
+    val pendingRoute by PendingRoute.route.collectAsStateWithLifecycle()
+    LaunchedEffect(pendingRoute) {
+        val r = pendingRoute ?: return@LaunchedEffect
+        PendingRoute.route.value = null
+        if (PendingRoute.isValid(r)) runCatching { nav.navigate(r) { launchSingleTop = true } }
+    }
     Column(Modifier.fillMaxSize().background(PolyColors.AmazeVoidBlack).systemBarsPadding()) {
         TelemetryTopBar()
         Box(Modifier.weight(1f)) {

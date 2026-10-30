@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launcher long-press shortcuts; MainActivity reads the "route" extra and navigates there. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_stat_polylingua"
+        android:shortcutId="drill"
+        android:shortcutLongLabel="@string/shortcut_drill_long"
+        android:shortcutShortLabel="@string/shortcut_drill">
+        <intent
+            android:action="android.intent.action.MAIN"
+            android:targetClass="com.polylingua.edge.MainActivity"
+            android:targetPackage="com.polylingua.edge">
+            <extra android:name="route" android:value="arena/drill?caseId=-1" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_stat_polylingua"
+        android:shortcutId="mock"
+        android:shortcutLongLabel="@string/shortcut_mock_long"
+        android:shortcutShortLabel="@string/shortcut_mock">
+        <intent
+            android:action="android.intent.action.MAIN"
+            android:targetClass="com.polylingua.edge.MainActivity"
+            android:targetPackage="com.polylingua.edge">
+            <extra android:name="route" android:value="arena/mock?caseId=-1" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_stat_polylingua"
+        android:shortcutId="elsa"
+        android:shortcutLongLabel="@string/shortcut_elsa_long"
+        android:shortcutShortLabel="@string/shortcut_elsa">
+        <intent
+            android:action="android.intent.action.MAIN"
+            android:targetClass="com.polylingua.edge.MainActivity"
+            android:targetPackage="com.polylingua.edge">
+            <extra android:name="route" android:value="elsa?caseId=-1" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_stat_polylingua"
+        android:shortcutId="tandem"
+        android:shortcutLongLabel="@string/shortcut_tandem_long"
+        android:shortcutShortLabel="@string/shortcut_tandem">
+        <intent
+            android:action="android.intent.action.MAIN"
+            android:targetClass="com.polylingua.edge.MainActivity"
+            android:targetPackage="com.polylingua.edge">
+            <extra android:name="route" android:value="tandem" />
+        </intent>
+    </shortcut>
+</shortcuts>

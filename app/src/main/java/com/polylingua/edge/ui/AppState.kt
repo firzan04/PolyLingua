@@ -47,6 +47,13 @@ object PendingImport {
     val uri = MutableStateFlow<Uri?>(null)
 }
 
+/** Navigation requested by a launcher shortcut (intent extra "route"). */
+object PendingRoute {
+    val route = MutableStateFlow<String?>(null)
+    private val allowed = listOf("home", "setup", "arena/", "elsa", "tandem", "cake", "quiz/", "dashboard")
+    fun isValid(r: String): Boolean = allowed.any { r == it || r.startsWith(it) }
+}
+
 @HiltViewModel
 class TelemetryViewModel @Inject constructor(
     private val telemetry: DeviceTelemetry,

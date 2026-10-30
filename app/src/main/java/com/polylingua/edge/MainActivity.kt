@@ -14,6 +14,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import com.polylingua.edge.ui.PendingImport
+import com.polylingua.edge.ui.PendingRoute
 import com.polylingua.edge.ui.navigation.PolyLinguaRoot
 import com.polylingua.edge.ui.theme.PolyLinguaTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -47,6 +48,12 @@ class MainActivity : ComponentActivity() {
     /** "Open with PolyLingua" for .xlsx workbooks shared from a file manager or Drive. */
     private fun handleIntent(intent: Intent?) {
         if (intent?.action == Intent.ACTION_VIEW) intent.data?.let { PendingImport.uri.value = it }
+        intent?.getStringExtra(EXTRA_ROUTE)?.let { PendingRoute.route.value = it }
+    }
+
+    companion object {
+        /** Launcher-shortcut extra: navigation route to open (see res/xml/shortcuts.xml). */
+        const val EXTRA_ROUTE = "route"
     }
 
     /**

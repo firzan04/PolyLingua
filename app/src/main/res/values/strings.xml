@@ -3,4 +3,12 @@
     <string name="app_name">PolyLingua Edge</string>
     <string name="fgs_channel_name">Sesi latihan aktif</string>
     <string name="fgs_channel_desc">Menjaga rekaman ujian IELTS, panggilan P2P, unduhan model dan indeks Excel tetap berjalan di MIUI.</string>
+    <string name="shortcut_drill">60-s drill</string>
+    <string name="shortcut_drill_long">IELTS 60-second drill</string>
+    <string name="shortcut_mock">Full mock</string>
+    <string name="shortcut_mock_long">Full IELTS speaking mock</string>
+    <string name="shortcut_elsa">ELSA lab</string>
+    <string name="shortcut_elsa_long">ELSA phoneme lab</string>
+    <string name="shortcut_tandem">AI partners</string>
+    <string name="shortcut_tandem_long">HelloTalk · Tandem partners</string>
 </resources>
