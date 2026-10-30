@@ -194,4 +194,5 @@ dependencies {
     implementation(libs.webrtc)
 
     testImplementation(libs.junit)
+    testImplementation(libs.org.json)
 }

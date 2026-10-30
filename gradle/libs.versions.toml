@@ -20,6 +20,7 @@ oboe = "1.9.0"
 webrtc = "1.2.2"
 documentfile = "1.0.1"
 junit = "4.13.2"
+orgJson = "20240303"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -57,6 +58,7 @@ commons-compress = { group = "org.apache.commons", name = "commons-compress", ve
 oboe = { group = "com.google.oboe", name = "oboe", version.ref = "oboe" }
 webrtc = { group = "io.getstream", name = "stream-webrtc-android", version.ref = "webrtc" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
+org-json = { group = "org.json", name = "json", version.ref = "orgJson" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
