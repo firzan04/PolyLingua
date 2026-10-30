@@ -4,7 +4,7 @@ import kotlin.math.floor
 
 /** CEFR common reference levels, mapped to IELTS speaking bands exactly as specified. */
 enum class CefrLevel(val rank: Int, val minBand: Double, val maxBand: Double) {
-    A1(0, 0.0, 2.5),
+    A1(0, 1.0, 2.5),
     A2(1, 3.0, 3.5),
     B1(2, 4.0, 5.0),
     B2(3, 5.5, 6.5),

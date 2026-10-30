@@ -75,7 +75,7 @@ fun PolyLinguaRoot(nav: NavHostController = rememberNavController()) {
     LaunchedEffect(pendingRoute) {
         val r = pendingRoute ?: return@LaunchedEffect
         PendingRoute.route.value = null
-        if (PendingRoute.isValid(r)) runCatching { nav.navigate(r) { launchSingleTop = true } }
+        if (PendingRoute.isValid(r)) runCatching { nav.navigate(r) }
     }
     Column(Modifier.fillMaxSize().background(PolyColors.AmazeVoidBlack).systemBarsPadding()) {
         TelemetryTopBar()

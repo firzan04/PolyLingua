@@ -31,7 +31,7 @@ object MiuiCompat {
             ?: readProp("ro.mi.os.version.name")?.takeIf { it.isNotBlank() }
     }
 
-    val isMiui: Boolean get() = miuiVersion != null || isXiaomiFamily
+    val isMiui: Boolean get() = isXiaomiFamily || miuiVersion != null
 
     private fun readProp(name: String): String? = runCatching {
         val p = ProcessBuilder("getprop", name).redirectErrorStream(true).start()

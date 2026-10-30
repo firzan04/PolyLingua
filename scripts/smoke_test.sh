@@ -52,14 +52,22 @@ adb shell dumpsys meminfo "$PKG" | grep -E "TOTAL PSS|TOTAL RSS|Native Heap|Java
 adb shell dumpsys gfxinfo "$PKG" | grep -E "Total frames|Janky frames|90th|99th" | tee -a "$SUMMARY"
 
 log "== monkey stress (1200 events)"
-adb shell monkey -p "$PKG" --pct-syskeys 0 --pct-appswitch 0 --pct-anyevent 0 --throttle 200 -s 4107 -v 1200 > "$OUT/monkey.txt" 2>&1
+# System UI (e.g. the notification shade) can ANR on the software-rendered emulator; keep going
+# and judge only this app's crashes/ANRs below.
+adb shell monkey -p "$PKG" --pct-syskeys 0 --pct-appswitch 0 --pct-anyevent 0 --throttle 200 -s 4107 \
+  --ignore-timeouts --ignore-native-crashes -v 1200 > "$OUT/monkey.txt" 2>&1
 tail -n 5 "$OUT/monkey.txt" | tee -a "$SUMMARY"
 shot 99_after_monkey 3
 
 adb logcat -d > "$OUT/logcat-full.txt"
 grep -E "AndroidRuntime|FATAL EXCEPTION|ANR in|PolyLingua|libc  |DEBUG   :" "$OUT/logcat-full.txt" | grep -v "PolyLinguaCores" | head -n 400 > "$OUT/logcat-app.txt"
-CRASHES=$(grep -cE "FATAL EXCEPTION|ANR in $PKG|Fatal signal" "$OUT/logcat-full.txt" || true)
-MONKEY_CRASH=$(grep -cE "// CRASH|// NOT RESPONDING" "$OUT/monkey.txt" || true)
+APP_JAVA_CRASH=$(grep -A2 "FATAL EXCEPTION" "$OUT/logcat-full.txt" | grep -c "Process: $PKG" || true)
+APP_NATIVE_CRASH=$(grep "Fatal signal" "$OUT/logcat-full.txt" | grep -c "polylingua" || true)
+APP_ANR=$(grep -c "ANR in $PKG" "$OUT/logcat-full.txt" || true)
+CRASHES=$((APP_JAVA_CRASH + APP_NATIVE_CRASH + APP_ANR))
+MONKEY_CRASH=$(grep -cE "// (CRASH|NOT RESPONDING): $PKG" "$OUT/monkey.txt" || true)
+OTHER=$(grep -cE "// (CRASH|NOT RESPONDING): " "$OUT/monkey.txt" || true)
+log "other-process monkey reports (ignored): $((OTHER - MONKEY_CRASH))"
 log "fatal/anr in logcat: $CRASHES · monkey crash markers: $MONKEY_CRASH"
 if [ "$CRASHES" -gt 0 ] || [ "$MONKEY_CRASH" -gt 0 ]; then
   grep -E -A 30 "FATAL EXCEPTION|Fatal signal" "$OUT/logcat-full.txt" | head -n 120 > "$OUT/crash.txt"
