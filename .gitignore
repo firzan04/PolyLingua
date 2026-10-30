@@ -1,0 +1,28 @@
+# Gradle / Android Studio
+.gradle/
+build/
+/local.properties
+/.idea/
+*.iml
+.DS_Store
+/captures
+.externalNativeBuild/
+.cxx/
+*.hprof
+
+# Fetched native dependencies (re-created by scripts/fetch_native_deps.*)
+app/src/main/cpp/third_party/
+app/src/main/jniLibs/
+.deps-cache/
+
+# Build outputs and secrets
+*.apk
+*.aab
+release-output/
+keystore/*.jks
+keystore/*.p12
+keystore/*.properties
+signing.properties
+
+# Node (signaling server)
+signaling-server/node_modules/

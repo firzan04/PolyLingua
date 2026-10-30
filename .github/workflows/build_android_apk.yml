@@ -1,0 +1,159 @@
+name: Build PolyLingua Edge APK
+
+# Every push to main compiles the native (llama.cpp + JNI) and Kotlin layers, signs the APK with
+# a key derived from the KEYSTORE_PASSWORD secret (never stored in git) and publishes it as a
+# GitHub Release, so the newest build is always at:
+#   https://github.com/<owner>/<repo>/releases/latest/download/PolyLingua_POCO_M4_Pro_Release.apk
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - 'signaling-server/**'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NDK_VERSION: "27.2.12479018"
+  CMAKE_VERSION: "3.22.1"
+  APK_NAME: PolyLingua_POCO_M4_Pro_Release.apk
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle (with cache)
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install Android SDK platform, build-tools, NDK and CMake
+        run: |
+          mkdir -p ci-logs
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" --install "platforms;android-34" "build-tools;34.0.0" "ndk;${NDK_VERSION}" "cmake;${CMAKE_VERSION}" 2>&1 | tail -n 5 | tee ci-logs/sdk.log
+
+      - name: Cache fetched native dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            .deps-cache
+            app/src/main/cpp/third_party
+            app/src/main/jniLibs
+          key: native-deps-v1-sherpa1.13.8-llama-b12000-ort1.22.0
+
+      - name: Fetch native dependencies (sherpa-onnx, ONNX Runtime header, llama.cpp)
+        run: ./scripts/fetch_native_deps.sh 2>&1 | tee ci-logs/fetch.log
+
+      - name: Derive release keystore from the KEYSTORE_PASSWORD secret
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          # No key material lives in git: the signing key is derived deterministically from the
+          # secret (scripts/derive_release_keystore.py), so every build has the same certificate.
+          if [ -n "$KEYSTORE_PASSWORD" ]; then
+            python3 -m pip install --quiet --disable-pip-version-check "cryptography>=42"
+            python3 scripts/derive_release_keystore.py keystore/polylingua-release.p12
+          else
+            echo "KEYSTORE_PASSWORD secret not available to this run."
+          fi
+
+      - name: Select signing mode
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_PASSWORD" ] && keytool -list -storetype PKCS12 -keystore keystore/polylingua-release.p12 \
+               -storepass "$KEYSTORE_PASSWORD" > /dev/null 2>&1; then
+            echo "SIGNING_MODE=release" >> "$GITHUB_ENV"
+            echo "Release keystore unlocked."
+          else
+            echo "SIGNING_MODE=debug" >> "$GITHUB_ENV"
+            echo "::warning title=Signing::KEYSTORE_PASSWORD secret missing or wrong - APK signed with the debug key."
+          fi
+
+      - name: Assemble release APK and run unit tests
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          set -o pipefail
+          if [ "$SIGNING_MODE" != "release" ]; then unset KEYSTORE_PASSWORD; fi
+          ./gradlew --no-daemon --stacktrace :app:assembleRelease :app:testReleaseUnitTest 2>&1 | tee ci-logs/gradle.log
+
+      - name: Collect and verify APK
+        run: |
+          mkdir -p release-output
+          cp app/build/outputs/apk/release/app-release.apk "release-output/${APK_NAME}"
+          APKSIGNER="$ANDROID_HOME/build-tools/34.0.0/apksigner"
+          "$APKSIGNER" verify --verbose --print-certs "release-output/${APK_NAME}" | tee release-output/signature.txt
+          unzip -l "release-output/${APK_NAME}" | grep -E "lib/arm64-v8a/.*\.so" | tee release-output/native-libs.txt
+          (cd release-output && sha256sum "${APK_NAME}" > "${APK_NAME}.sha256")
+          ls -la release-output
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PolyLingua_POCO_M4_Pro_Release
+          path: release-output/
+          retention-days: 30
+
+      - name: Publish GitHub Release
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="build-${GITHUB_RUN_NUMBER}"
+          SIZE=$(du -h "release-output/${APK_NAME}" | cut -f1)
+          cat > release-notes.md <<EOF
+          PolyLingua Edge for POCO M4 Pro (4G) - arm64-v8a, Android 11+.
+
+          - Commit: ${GITHUB_SHA}
+          - Version: 1.0.${GITHUB_RUN_NUMBER} (versionCode ${GITHUB_RUN_NUMBER})
+          - APK size: ${SIZE}
+          - Signing: ${SIGNING_MODE} key
+
+          Install: download **${APK_NAME}** on the phone and open it (allow "Install unknown apps" for your browser/file manager).
+          Speech/LLM models are downloaded once inside the app (Model Center) and then run fully offline.
+          EOF
+          gh release create "$TAG" "release-output/${APK_NAME}" "release-output/${APK_NAME}.sha256" \
+            --title "PolyLingua Edge build ${GITHUB_RUN_NUMBER}" --notes-file release-notes.md --latest
+
+      - name: Publish failure log to the ci-logs branch
+        if: failure() && github.event_name != 'pull_request'
+        run: |
+          mkdir -p ci-logs
+          {
+            echo "run=${GITHUB_RUN_NUMBER} sha=${GITHUB_SHA}"
+            for f in ci-logs/sdk.log ci-logs/fetch.log; do [ -f "$f" ] && { echo "===== $f (tail)"; tail -n 40 "$f"; }; done
+            if [ -f ci-logs/gradle.log ]; then
+              echo "===== gradle errors"
+              grep -n -E "^e: |error:|FAILED|What went wrong|Could not|Execution failed|Caused by|CMake Error|undefined reference|> Task .* FAILED" ci-logs/gradle.log | head -n 300
+              echo "===== gradle tail"
+              tail -n 250 ci-logs/gradle.log
+            fi
+          } > "failure-${GITHUB_RUN_NUMBER}.log"
+          git config user.name "polylingua-ci"
+          git config user.email "polylingua-ci@users.noreply.github.com"
+          cp "failure-${GITHUB_RUN_NUMBER}.log" /tmp/
+          git fetch origin ci-logs:ci-logs 2>/dev/null || true
+          if git show-ref --verify --quiet refs/heads/ci-logs; then git checkout -f ci-logs; else git checkout --orphan ci-logs && git rm -rf --cached . > /dev/null && rm -rf ./*; fi
+          cp "/tmp/failure-${GITHUB_RUN_NUMBER}.log" "failure-${GITHUB_RUN_NUMBER}.log"
+          cp "/tmp/failure-${GITHUB_RUN_NUMBER}.log" latest-failure.log
+          git add "failure-${GITHUB_RUN_NUMBER}.log" latest-failure.log
+          git commit -m "CI failure log for run ${GITHUB_RUN_NUMBER}" > /dev/null
+          git push origin ci-logs

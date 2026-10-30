@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PolyLingua Edge</string>
+    <string name="fgs_channel_name">Sesi latihan aktif</string>
+    <string name="fgs_channel_desc">Menjaga rekaman ujian IELTS, panggilan P2P, unduhan model dan indeks Excel tetap berjalan di MIUI.</string>
+</resources>

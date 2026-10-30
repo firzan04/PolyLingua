@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- AMOLED true-black window so unlit OLED subpixels stay off even before Compose draws. -->
+    <style name="Theme.PolyLingua" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/amaze_void_black</item>
+        <item name="android:colorBackground">@color/amaze_void_black</item>
+        <item name="android:statusBarColor">@color/amaze_void_black</item>
+        <item name="android:navigationBarColor">@color/amaze_void_black</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:colorAccent">@color/electric_teal</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+    </style>
+</resources>
