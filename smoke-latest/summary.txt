@@ -6,8 +6,8 @@ Starting: Intent { cmp=com.polylingua.edge/.MainActivity }
 Status: ok
 LaunchState: COLD
 Activity: com.polylingua.edge/.MainActivity
-TotalTime: 1960
-WaitTime: 1967
+TotalTime: 2050
+WaitTime: 2062
 Complete
 screen 01_home: running
 screen 02_setup: running
@@ -21,22 +21,23 @@ screen 09_quiz_flash_packages_: running
 screen 10_dashboard: running
 screen 11_home: running
 == memory
-  Native Heap    32410    32344        0        0    34836    94324    29271    61114
-           Java Heap:    32664                          56048
-         Native Heap:    32344                          34836
-           TOTAL PSS:   112294            TOTAL RSS:   242516      TOTAL SWAP (KB):        0
-Total frames rendered: 214
-Janky frames: 176 (82.24%)
-90th percentile: 81ms
+  Native Heap    30494    30420        0        0    32912    94836    27932    63359
+           Java Heap:    26788                          50148
+         Native Heap:    30420                          32912
+           TOTAL PSS:   104806            TOTAL RSS:   234304      TOTAL SWAP (KB):        0
+Total frames rendered: 224
+Janky frames: 175 (78.12%)
+90th percentile: 73ms
 99th percentile: 150ms
-90th gpu percentile: 23ms
+90th gpu percentile: 24ms
 99th gpu percentile: 4950ms
 == monkey stress (1200 events)
-Events injected: 841
+Events injected: 1200
 :Sending rotation degree=0, persist=false
-:Dropped: keys=0 pointers=0 trackballs=0 flips=4 rotations=0
-## Network stats: elapsed time=46434ms (0ms mobile, 0ms wifi, 46434ms not connected)
-** System appears to have crashed at event 841 of 1200 using seed 4107
+:Dropped: keys=0 pointers=0 trackballs=0 flips=7 rotations=0
+## Network stats: elapsed time=52873ms (0ms mobile, 0ms wifi, 52873ms not connected)
+// Monkey finished
 screen 99_after_monkey: running
-fatal/anr in logcat: 0 · monkey crash markers: 1
-RESULT: FAIL
+other-process monkey reports (ignored): 0
+fatal/anr in logcat: 0 · monkey crash markers: 0
+RESULT: PASS

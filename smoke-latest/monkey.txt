@@ -10,9 +10,11 @@
   bash arg: 200
   bash arg: -s
   bash arg: 4107
+  bash arg: --ignore-timeouts
+  bash arg: --ignore-native-crashes
   bash arg: -v
   bash arg: 1200
-args: [-p, com.polylingua.edge, --pct-syskeys, 0, --pct-appswitch, 0, --pct-anyevent, 0, --throttle, 200, -s, 4107, -v, 1200]
+args: [-p, com.polylingua.edge, --pct-syskeys, 0, --pct-appswitch, 0, --pct-anyevent, 0, --throttle, 200, -s, 4107, --ignore-timeouts, --ignore-native-crashes, -v, 1200]
  arg: "-p"
  arg: "com.polylingua.edge"
  arg: "--pct-syskeys"
@@ -25,6 +27,8 @@ args: [-p, com.polylingua.edge, --pct-syskeys, 0, --pct-appswitch, 0, --pct-anye
  arg: "200"
  arg: "-s"
  arg: "4107"
+ arg: "--ignore-timeouts"
+ arg: "--ignore-native-crashes"
  arg: "-v"
  arg: "1200"
 data="com.polylingua.edge"
@@ -37,6 +41,8 @@ data="0"
 arg="--throttle" mCurArgData="null" mNextArg=9 argwas="--throttle" nextarg="200"
 data="200"
 data="4107"
+arg="--ignore-timeouts" mCurArgData="null" mNextArg=13 argwas="--ignore-timeouts" nextarg="--ignore-native-crashes"
+arg="--ignore-native-crashes" mCurArgData="null" mNextArg=14 argwas="--ignore-native-crashes" nextarg="-v"
 :Monkey: seed=4107 count=1200
 :AllowPackage: com.polylingua.edge
 :IncludeCategory: android.intent.category.LAUNCHER
@@ -82,7 +88,7 @@ data="4107"
 :Sending Touch (ACTION_DOWN): 0:(285.0,50.0)
 :Sending Touch (ACTION_UP): 0:(298.12827,52.492443)
 :Sending Touch (ACTION_DOWN): 0:(1010.0,1970.0)
-    //[calendar_time:2026-10-30 10:26:24.962  system_uptime:165439]
+    //[calendar_time:2026-10-30 10:37:32.790  system_uptime:167257]
     // Sending event #100
 :Sending Touch (ACTION_UP): 0:(1011.6494,1976.9816)
 :Sending Touch (ACTION_DOWN): 0:(798.0,2029.0)
@@ -113,7 +119,7 @@ Got IOException performing flipjava.io.FileNotFoundException: /dev/input/event0:
 :Sending Touch (ACTION_DOWN): 0:(468.0,1028.0)
 :Sending Touch (ACTION_UP): 0:(480.32404,989.6289)
 :Sending Trackball (ACTION_MOVE): 0:(-4.0,0.0)
-    //[calendar_time:2026-10-30 10:26:29.875  system_uptime:170351]
+    //[calendar_time:2026-10-30 10:37:37.537  system_uptime:172003]
     // Sending event #200
 :Sending Touch (ACTION_DOWN): 0:(543.0,504.0)
 :Sending Touch (ACTION_UP): 0:(543.3346,503.97717)
@@ -141,9 +147,9 @@ Got IOException performing flipjava.io.FileNotFoundException: /dev/input/event0:
 :Sending Trackball (ACTION_MOVE): 0:(0.0,1.0)
 :Sending Touch (ACTION_DOWN): 0:(673.0,179.0)
 :Sending Touch (ACTION_UP): 0:(684.06134,199.06682)
-    //[calendar_time:2026-10-30 10:26:33.690  system_uptime:174166]
+    //[calendar_time:2026-10-30 10:37:41.309  system_uptime:175775]
     // Sending event #300
-    //[calendar_time:2026-10-30 10:26:33.890  system_uptime:174366]
+    //[calendar_time:2026-10-30 10:37:41.509  system_uptime:175976]
     // Sending event #300
 :Sending Trackball (ACTION_MOVE): 0:(3.0,0.0)
 :Sending Trackball (ACTION_MOVE): 0:(-4.0,-4.0)
@@ -160,7 +166,7 @@ Got IOException performing flipjava.io.FileNotFoundException: /dev/input/event0:
 :Sending Touch (ACTION_DOWN): 0:(254.0,1145.0)
 :Sending Touch (ACTION_UP): 0:(211.8405,1113.2273)
 :Sending Trackball (ACTION_MOVE): 0:(-1.0,2.0)
-    //[calendar_time:2026-10-30 10:26:36.048  system_uptime:176524]
+    //[calendar_time:2026-10-30 10:37:43.618  system_uptime:178084]
     // Sending event #400
 :Sending Touch (ACTION_DOWN): 0:(547.0,2134.0)
 :Sending Touch (ACTION_UP): 0:(536.7691,2118.4949)
@@ -192,9 +198,9 @@ Got IOException performing flipjava.io.FileNotFoundException: /dev/input/event0:
 :Sending Touch (ACTION_UP): 0:(628.62695,1319.1732)
 :Sending Touch (ACTION_DOWN): 0:(57.0,411.0)
 :Sending Touch (ACTION_UP): 0:(43.106995,401.70282)
-    //[calendar_time:2026-10-30 10:26:41.168  system_uptime:181644]
+    //[calendar_time:2026-10-30 10:37:48.810  system_uptime:183276]
     // Sending event #500
-    //[calendar_time:2026-10-30 10:26:41.368  system_uptime:181844]
+    //[calendar_time:2026-10-30 10:37:49.010  system_uptime:183476]
     // Sending event #500
 :Sending Touch (ACTION_DOWN): 0:(518.0,112.0)
 :Sending Touch (ACTION_UP): 0:(527.72565,120.60545)
@@ -215,7 +221,7 @@ Got IOException performing flipjava.io.FileNotFoundException: /dev/input/event0:
 :Sending Touch (ACTION_DOWN): 0:(201.0,1370.0)
 :Sending Touch (ACTION_UP): 0:(193.69081,1372.6793)
 :Sending Trackball (ACTION_MOVE): 0:(-5.0,-4.0)
-    //[calendar_time:2026-10-30 10:26:45.588  system_uptime:186063]
+    //[calendar_time:2026-10-30 10:37:53.011  system_uptime:187477]
     // Sending event #600
 :Sending Touch (ACTION_DOWN): 0:(615.0,698.0)
 :Sending Touch (ACTION_UP): 0:(593.54004,715.48596)
@@ -246,7 +252,7 @@ Got IOException performing flipjava.io.FileNotFoundException: /dev/input/event0:
 :Sending Touch (ACTION_DOWN): 0:(411.0,2010.0)
 :Sending Touch (ACTION_UP): 0:(410.00507,1990.24)
 :Sending Trackball (ACTION_MOVE): 0:(-2.0,-2.0)
-    //[calendar_time:2026-10-30 10:26:51.027  system_uptime:191503]
+    //[calendar_time:2026-10-30 10:37:58.349  system_uptime:192815]
     // Sending event #700
 :Sending Touch (ACTION_DOWN): 0:(66.0,1766.0)
 :Sending Touch (ACTION_UP): 0:(96.04595,1783.9688)
@@ -269,7 +275,7 @@ Got IOException performing flipjava.io.FileNotFoundException: /dev/input/event0:
 :Sending Touch (ACTION_DOWN): 0:(803.0,1832.0)
 :Sending Touch (ACTION_UP): 0:(808.01196,1830.3387)
 :Sending Trackball (ACTION_MOVE): 0:(-4.0,0.0)
-    //[calendar_time:2026-10-30 10:26:59.358  system_uptime:199834]
+    //[calendar_time:2026-10-30 10:38:02.834  system_uptime:197300]
     // Sending event #800
 :Sending Touch (ACTION_DOWN): 0:(188.0,847.0)
 :Sending Touch (ACTION_UP): 0:(186.32278,848.2983)
@@ -277,707 +283,114 @@ Got IOException performing flipjava.io.FileNotFoundException: /dev/input/event0:
 :Sending Trackball (ACTION_MOVE): 0:(3.0,4.0)
 :Sending Touch (ACTION_DOWN): 0:(1059.0,219.0)
 :Sending Touch (ACTION_UP): 0:(1057.2039,222.57587)
-// NOT RESPONDING: com.android.systemui (pid 711)
-ANR in com.android.systemui
-PID: 711
-Reason: Input dispatching timed out (7ff4970 NotificationShade (server) is not responding. Waited 5000ms for MotionEvent(deviceId=-1, source=0x00010004, displayId=0, action=MOVE, actionButton=0x00000000, flags=0x00000000, metaState=0x00000000, buttonState=0x00000000, classification=NONE, edgeFlags=0x00000000, xPrecision=1.0, yPrecision=1.0, xCursorPosition=nan, yCursorPosition=nan, pointers=[0: (-1.0, 1.0)]), policyFlags=0x6b000000)
-Load: 2.98 / 2.7 / 1.19
------ Output from /proc/pressure/memory -----
-some avg10=0.03 avg60=0.07 avg300=0.05 total=319979
-full avg10=0.00 avg60=0.00 avg300=0.00 total=37231
------ End output from /proc/pressure/memory -----
-
-CPU usage from 162377ms to 0ms ago (2026-10-30 10:24:16.776 to 2026-10-30 10:26:59.153):
-  9.9% 494/system_server: 7.1% user + 2.8% kernel / faults: 84466 minor 110 major
-  9.1% 304/android.hardware.graphics.composer@2.3-service: 0% user + 9% kernel / faults: 6 minor
-  6.5% 1152/com.google.android.gms.persistent: 4.9% user + 1.6% kernel / faults: 170375 minor 21 major
-  4.6% 1368/com.google.android.gms: 3.8% user + 0.7% kernel / faults: 104642 minor 53 major
-  3.4% 1419/com.google.android.inputmethod.latin: 1.7% user + 1.6% kernel / faults: 31252 minor 3 major
-  2.3% 711/com.android.systemui: 0.3% user + 1.9% kernel / faults: 4580 minor 1 major
-  2.3% 351/surfaceflinger: 0.4% user + 1.9% kernel / faults: 586 minor 1 major
-  2% 1910/com.google.android.googlequicksearchbox:search: 1.6% user + 0.4% kernel / faults: 57638 minor 20 major
-  1.4% 272/kworker/1:3-kdmflush: 0% user + 1.4% kernel
-  1% 16/ksoftirqd/1: 0% user + 1% kernel
-  0.8% 2017/android.process.media: 0.4% user + 0.4% kernel / faults: 5241 minor
-  0.7% 1624/com.google.process.gservices: 0.3% user + 0.3% kernel / faults: 11711 minor
-  0.5% 409/dhcpclient: 0% user + 0.5% kernel / faults: 1 minor
-  0.5% 919/com.google.android.apps.nexuslauncher: 0.3% user + 0.2% kernel / faults: 16484 minor 8 major
-  0.4% 294/android.hardware.bluetooth@1.1-service.sim: 0% user + 0.3% kernel / faults: 3 minor
-  0.4% 292/android.hardware.audio.service.ranchu: 0% user + 0.3% kernel / faults: 5 minor
-  0.4% 1038/com.android.phone: 0.3% user + 0.1% kernel / faults: 15348 minor 9 major
-  0.4% 159/logd: 0.1% user + 0.2% kernel / faults: 628 minor
-  0.3% 200/jbd2/dm-5-8: 0% user + 0.3% kernel
-  0.3% 284/statsd: 0% user + 0.2% kernel / faults: 277 minor
-  0.3% 303/android.hardware.graphics.allocator@3.0-service: 0% user + 0.3% kernel
-  0.3% 10/rcu_preempt: 0% user + 0.3% kernel
-  0.2% 362/logcat: 0% user + 0.2% kernel / faults: 6 minor
-  0.2% 377/audioserver: 0.1% user + 0.1% kernel / faults: 53 minor 1 major
-  0.2% 116/kworker/1:1H-kblockd: 0% user + 0.2% kernel
-  0.2% 323/android.hardware.sensors@2.1-service.multihal: 0% user + 0.2% kernel / faults: 2 minor
-  0.1% 390/adbd: 0% user + 0.1% kernel / faults: 2361 minor
-  0.1% 86/kswapd0: 0% user + 0.1% kernel
-  0.1% 7/kworker/u4:0+kverityd: 0% user + 0.1% kernel
-  0.1% 160/lmkd: 0% user + 0% kernel
-  0.1% 1985/com.google.process.gapps: 0% user + 0% kernel / faults: 2254 minor
-  0.1% 286/zygote64: 0% user + 0% kernel / faults: 7509 minor
-  0% 1617/com.google.android.providers.media.module: 0% user + 0% kernel / faults: 2970 minor
-  0% 129/kworker/u4:2-kverityd: 0% user + 0% kernel
-  0% 89/kworker/u4:1-kverityd: 0% user + 0% kernel
-  0% 162/servicemanager: 0% user + 0% kernel
-  0% 285/netd: 0% user + 0% kernel / faults: 694 minor
-  0% 416/traced_probes: 0% user + 0% kernel / faults: 96 minor
-  0% 454/llkd: 0% user + 0% kernel / faults: 160 minor
-  0% 964/com.android.networkstack.process: 0% user + 0% kernel / faults: 950 minor
-  0% 2464/com.google.android.partnersetup: 0% user + 0% kernel / faults: 1789 minor
-  0% 9/ksoftirqd/0: 0% user + 0% kernel
-  0% 117/kworker/0:1H-kblockd: 0% user + 0% kernel
-  0% 693/com.android.bluetooth: 0% user + 0% kernel / faults: 324 minor 5 major
-  0% 24/kcompactd0: 0% user + 0% kernel
-  0% 427/keystore: 0% user + 0% kernel / faults: 185 minor 2 major
-  0% 434/mediaserver: 0% user + 0% kernel / faults: 82 minor 5 major
-  0% 425/iorapd: 0% user + 0% kernel / faults: 11871 minor
-  0% 1470/com.android.dialer: 0% user + 0% kernel / faults: 881 minor 1 major
-  0% 5/kworker/0:0-cgroup_pidlist_destroy: 0% user + 0% kernel
-  0% 428/media.extractor: 0% user + 0% kernel / faults: 41 minor
-  0% 1/init: 0% user + 0% kernel / faults: 5 minor
-  0% 166/hwservicemanager: 0% user + 0% kernel
-  0% 287/zygote: 0% user + 0% kernel / faults: 806 minor
-  0% 305/iptables-restore: 0% user + 0% kernel / faults: 10 minor
-  0% 308/android.hardware.health@2.1-service: 0% user + 0% kernel / faults: 2 minor
-  0% 333/android.hardware.wifi@1.0-service: 0% user + 0% kernel / faults: 1 minor
-  0% 344/media.log: 0% user + 0% kernel / faults: 12 minor
-  0% 433/media.metrics: 0% user + 0% kernel / faults: 115 minor
-  0% 901/android.hardware.gnss@2.0-service.ranchu: 0% user + 0% kernel
-  0% 114/kworker/1:2-cgroup_pidlist_destroy: 0% user + 0% kernel
-  0% 172/vold: 0% user + 0% kernel / faults: 94 minor
-  0% 204/android.system.suspend@1.0-service: 0% user + 0% kernel
-  0% 245/loop19: 0% user + 0% kernel
-  0% 407/mdnsd: 0% user + 0% kernel / faults: 4 minor
-  0% 417/traced: 0% user + 0% kernel / faults: 646 minor
-  0% 441/libgoldfish-rild: 0% user + 0% kernel / faults: 57 minor
-  0% 1638/com.google.android.googlequicksearchbox:interactor: 0% user + 0% kernel / faults: 450 minor
- +0% 2815/com.google.android.gms.unstable: 0% user + 0% kernel
- +0% 2867/com.google.android.apps.photos: 0% user + 0% kernel
- +0% 3014/com.android.providers.calendar: 0% user + 0% kernel
- +0% 3041/com.google.android.ims: 0% user + 0% kernel
- +0% 3192/com.google.android.apps.messaging: 0% user + 0% kernel
- +0% 5195/com.google.android.permissioncontroller: 0% user + 0% kernel
- +0% 5214/com.google.android.gm: 0% user + 0% kernel
- +0% 5285/com.polylingua.edge: 0% user + 0% kernel
- +0% 5478/com.google.android.setupwizard: 0% user + 0% kernel
- +0% 5528/com.google.android.apps.youtube.music: 0% user + 0% kernel
- +0% 5668/android.process.acore: 0% user + 0% kernel
- +0% 5694/com.google.android.syncadapters.contacts: 0% user + 0% kernel
- +0% 5798/com.google.android.apps.wallpaper: 0% user + 0% kernel
- +0% 5950/com.android.commands.monkey: 0% user + 0% kernel
- +0% 5970/com.google.android.tts: 0% user + 0% kernel
-34% TOTAL: 18% user + 15% kernel + 0.1% iowait + 0.6% softirq
-CPU usage from 12ms to 265ms later (2026-10-30 10:26:59.164 to 2026-10-30 10:26:59.417):
-  26% 5285/com.polylingua.edge: 4.4% user + 22% kernel / faults: 15 minor
-    17% 5318/RenderThread: 0% user + 17% kernel
-  20% 304/android.hardware.graphics.composer@2.3-service: 0% user + 20% kernel
-    20% 382/HwBinder:304_2: 0% user + 20% kernel
-  16% 494/system_server: 12% user + 4.1% kernel / faults: 308 minor
-    12% 6096/AnrConsumer: 8.3% user + 4.1% kernel
-  8.1% 351/surfaceflinger: 4% user + 4% kernel
-  3.9% 16/ksoftirqd/1: 0% user + 3.9% kernel
-  4% 377/audioserver: 4% user + 0% kernel
-  4.2% 1419/com.google.android.inputmethod.latin: 4.2% user + 0% kernel / faults: 7 minor
-28% TOTAL: 11% user + 17% kernel
-
-procrank:
-<empty>
-
-ZRAM: 0K physical used for 0K in swap (3018004K total swap)
- RAM: 4024012K total, 253992K free, 54116K buffers, 2418668K cached, 40864K shmem, 135164K slab
-// procrank status was 0
-anr traces:
-// anr traces status was 1
-meminfo:
-Applications Memory Usage (in Kilobytes):
-Uptime: 206364 Realtime: 206364
-
-
-Total RSS by process:
-    375,560K: system (pid 494)
-    275,860K: com.google.android.googlequicksearchbox:search (pid 1910)
-    274,560K: com.android.systemui (pid 711)
-    269,020K: com.google.android.inputmethod.latin (pid 1419)
-    241,872K: com.google.android.tts (pid 5970)
-    235,752K: com.polylingua.edge (pid 5285 / activities)
-    221,372K: com.google.android.apps.nexuslauncher (pid 919 / activities)
-    209,284K: com.google.android.gms.persistent (pid 1152)
-    204,716K: com.google.android.gms (pid 1368)
-    190,500K: com.google.android.apps.messaging (pid 3192)
-    186,552K: com.google.android.apps.youtube.music (pid 5528)
-    180,784K: com.google.android.gms.unstable (pid 2815)
-    179,396K: zygote64 (pid 286)
-    172,280K: zygote (pid 287)
-    155,424K: com.android.phone (pid 1038)
-    154,764K: com.google.android.googlequicksearchbox:interactor (pid 1638)
-    148,772K: com.google.android.apps.photos (pid 2867)
-    146,908K: com.google.android.ext.services (pid 1399)
-    139,388K: com.google.android.ims (pid 3041)
-    139,384K: com.android.bluetooth (pid 693)
-    137,772K: com.android.networkstack.process (pid 964)
-    133,076K: com.google.android.providers.media.module (pid 1617)
-    131,464K: com.google.android.gm (pid 5214)
-    120,664K: android.process.media (pid 2017)
-    118,228K: android.process.acore (pid 5668)
-    117,356K: com.google.process.gapps (pid 1985)
-    112,880K: com.google.process.gservices (pid 1624)
-    112,056K: com.android.emulator.multidisplay (pid 1768)
-    111,920K: com.google.android.permissioncontroller (pid 5195)
-    111,732K: com.google.android.setupwizard (pid 5478)
-    111,696K: com.android.dialer (pid 1470)
-    109,168K: com.google.android.apps.wallpaper (pid 5798)
-    108,096K: com.google.android.partnersetup (pid 2464)
-    107,008K: com.android.se (pid 1017)
-    106,408K: com.android.providers.calendar (pid 3014)
-    105,872K: com.android.ims.rcsservice (pid 1737)
-    105,192K: com.android.commands.monkey (pid 5950)
-    105,132K: com.google.android.syncadapters.contacts (pid 5694)
-     65,872K: webview_zygote (pid 902)
-     34,476K: surfaceflinger (pid 351)
-     26,124K: android.hardware.graphics.composer@2.3-service (pid 304)
-     25,788K: media.extractor (pid 428)
-     24,132K: mediaserver (pid 434)
-     22,236K: cameraserver (pid 418)
-     20,288K: media.swcodec (pid 442)
-     18,644K: media.codec (pid 438)
-     18,352K: audioserver (pid 377)
-     15,768K: media.log (pid 344)
-     15,708K: android.hardware.camera.provider@2.4-service (pid 295)
-     14,200K: wpa_supplicant (pid 690)
-     13,540K: android.hardware.graphics.allocator@3.0-service (pid 303)
-     12,184K: libgoldfish-rild (pid 441)
-     11,580K: logd (pid 159)
-     11,196K: android.hardware.neuralnetworks@1.3-service-sample-float-fast (pid 311)
-     11,044K: android.hardware.neuralnetworks@1.3-service-sample-minimal (pid 318)
-     10,992K: android.hardware.camera.provider@2.6-service-google (pid 296)
-     10,956K: android.hardware.neuralnetworks@1.3-service-sample-float-slow (pid 317)
-     10,944K: android.hardware.neuralnetworks@1.3-service-sample-quant (pid 319)
-     10,940K: iorapd (pid 425)
-     10,928K: android.hardware.audio.service.ranchu (pid 292)
-     10,908K: android.hardware.neuralnetworks@1.3-service-sample-all (pid 309)
-     10,748K: netd (pid 285)
-     10,156K: init (pid 1)
-      9,608K: android.hardware.drm@1.3-service.widevine (pid 301)
-      9,420K: vold (pid 172)
-      9,404K: keystore (pid 427)
-      8,988K: android.hardware.drm@1.0-service (pid 299)
-      8,784K: android.hardware.wifi@1.0-service (pid 333)
-      8,492K: traced_probes (pid 416)
-      8,284K: android.hardware.drm@1.3-service.clearkey (pid 300)
-      8,176K: wificond (pid 436)
-      8,060K: drmserver (pid 419)
-      8,020K: android.hardware.identity-service.example (pid 336)
-      7,916K: credstore (pid 345)
-      7,828K: ueventd (pid 136)
-      7,716K: iorap.prefetcherd (pid 642)
-      7,428K: gatekeeperd (pid 443)
-      7,420K: media.metrics (pid 433)
-      7,396K: android.hardware.gnss@2.0-service.ranchu (pid 901)
-      7,388K: android.hardware.bluetooth@1.1-service.sim (pid 294)
-      7,384K: init (pid 134)
-      7,292K: android.hardware.keymaster@4.1-service (pid 180)
-      7,128K: gpuservice (pid 346)
-      6,852K: hwservicemanager (pid 166)
-      6,732K: installd (pid 424)
-      6,500K: android.hardware.sensors@2.1-service.multihal (pid 323)
-      6,404K: android.hardware.cas@1.2-service (pid 297)
-      6,212K: adbd (pid 390)
-      6,036K: android.hardware.gatekeeper@1.0-service.software (pid 302)
-      5,928K: storaged (pid 435)
-      5,756K: statsd (pid 284)
-      5,552K: android.hardware.health@2.1-service (pid 308)
-      5,444K: servicemanager (pid 162)
-      5,324K: incidentd (pid 422)
-      5,264K: android.system.suspend@1.0-service (pid 204)
-      5,236K: android.hardware.biometrics.fingerprint@2.1-service (pid 447)
-      5,216K: android.hardware.biometrics.face@1.0-service.example (pid 446)
-      5,180K: android.hardware.thermal@2.0-service.mock (pid 324)
-      5,160K: android.hardware.contexthub@1.1-service.mock (pid 298)
-      5,148K: android.hardware.power.stats@1.0-service.mock (pid 320)
-      5,112K: android.hardware.usb@1.0-service (pid 326)
-      5,028K: android.hardware.atrace@1.0-service (pid 205)
-      5,000K: android.hardware.input.classifier@1.0-service.default (pid 594)
-      4,964K: android.hardware.authsecret@1.0-service (pid 293)
-      4,932K: traced (pid 417)
-      4,852K: android.hardware.power-service.example (pid 338)
-      4,784K: android.hardware.vibrator-service.example (pid 341)
-      4,724K: android.hardware.lights-service.example (pid 337)
-      4,688K: android.hardware.rebootescrow-service.default (pid 340)
-      4,368K: android.hidl.allocator@1.0-service (pid 291)
-      4,356K: abb (pid 2091)
-      3,812K: dumpsys (pid 6166)
-      3,788K: llkd (pid 454)
-      3,580K: dhcpclient (pid 414)
-      3,532K: qemu-props (pid 169)
-      3,488K: ip6tables-restore (pid 306)
-      3,476K: dhcpclient (pid 409)
-      3,460K: createns (pid 274)
-      3,412K: iptables-restore (pid 305)
-      3,364K: logcat (pid 362)
-      3,128K: lmkd (pid 160)
-      3,096K: sh (pid 168)
-      2,768K: tombstoned (pid 279)
-      1,124K: mdnsd (pid 407)
-
-Total RSS by OOM adjustment:
-  1,259,484K: Native
-        179,396K: zygote64 (pid 286)
-        172,280K: zygote (pid 287)
-        105,192K: com.android.commands.monkey (pid 5950)
-         65,872K: webview_zygote (pid 902)
-         34,476K: surfaceflinger (pid 351)
-         26,124K: android.hardware.graphics.composer@2.3-service (pid 304)
-         25,788K: media.extractor (pid 428)
-         24,132K: mediaserver (pid 434)
-         22,236K: cameraserver (pid 418)
-         20,288K: media.swcodec (pid 442)
-         18,644K: media.codec (pid 438)
-         18,352K: audioserver (pid 377)
-         15,768K: media.log (pid 344)
-         15,708K: android.hardware.camera.provider@2.4-service (pid 295)
-         14,200K: wpa_supplicant (pid 690)
-         13,540K: android.hardware.graphics.allocator@3.0-service (pid 303)
-         12,184K: libgoldfish-rild (pid 441)
-         11,580K: logd (pid 159)
-         11,196K: android.hardware.neuralnetworks@1.3-service-sample-float-fast (pid 311)
-         11,044K: android.hardware.neuralnetworks@1.3-service-sample-minimal (pid 318)
-         10,992K: android.hardware.camera.provider@2.6-service-google (pid 296)
-         10,956K: android.hardware.neuralnetworks@1.3-service-sample-float-slow (pid 317)
-         10,944K: android.hardware.neuralnetworks@1.3-service-sample-quant (pid 319)
-         10,940K: iorapd (pid 425)
-         10,928K: android.hardware.audio.service.ranchu (pid 292)
-         10,908K: android.hardware.neuralnetworks@1.3-service-sample-all (pid 309)
-         10,748K: netd (pid 285)
-         10,156K: init (pid 1)
-          9,608K: android.hardware.drm@1.3-service.widevine (pid 301)
-          9,420K: vold (pid 172)
-          9,404K: keystore (pid 427)
-          8,988K: android.hardware.drm@1.0-service (pid 299)
-          8,784K: android.hardware.wifi@1.0-service (pid 333)
-          8,492K: traced_probes (pid 416)
-          8,284K: android.hardware.drm@1.3-service.clearkey (pid 300)
-          8,176K: wificond (pid 436)
-          8,060K: drmserver (pid 419)
-          8,020K: android.hardware.identity-service.example (pid 336)
-          7,916K: credstore (pid 345)
-          7,828K: ueventd (pid 136)
-          7,716K: iorap.prefetcherd (pid 642)
-          7,428K: gatekeeperd (pid 443)
-          7,420K: media.metrics (pid 433)
-          7,396K: android.hardware.gnss@2.0-service.ranchu (pid 901)
-          7,388K: android.hardware.bluetooth@1.1-service.sim (pid 294)
-          7,384K: init (pid 134)
-          7,292K: android.hardware.keymaster@4.1-service (pid 180)
-          7,128K: gpuservice (pid 346)
-          6,852K: hwservicemanager (pid 166)
-          6,732K: installd (pid 424)
-          6,500K: android.hardware.sensors@2.1-service.multihal (pid 323)
-          6,404K: android.hardware.cas@1.2-service (pid 297)
-          6,212K: adbd (pid 390)
-          6,036K: android.hardware.gatekeeper@1.0-service.software (pid 302)
-          5,928K: storaged (pid 435)
-          5,756K: statsd (pid 284)
-          5,552K: android.hardware.health@2.1-service (pid 308)
-          5,444K: servicemanager (pid 162)
-          5,324K: incidentd (pid 422)
-          5,264K: android.system.suspend@1.0-service (pid 204)
-          5,236K: android.hardware.biometrics.fingerprint@2.1-service (pid 447)
-          5,216K: android.hardware.biometrics.face@1.0-service.example (pid 446)
-          5,180K: android.hardware.thermal@2.0-service.mock (pid 324)
-          5,160K: android.hardware.contexthub@1.1-service.mock (pid 298)
-          5,148K: android.hardware.power.stats@1.0-service.mock (pid 320)
-          5,112K: android.hardware.usb@1.0-service (pid 326)
-          5,028K: android.hardware.atrace@1.0-service (pid 205)
-          5,000K: android.hardware.input.classifier@1.0-service.default (pid 594)
-          4,964K: android.hardware.authsecret@1.0-service (pid 293)
-          4,932K: traced (pid 417)
-          4,852K: android.hardware.power-service.example (pid 338)
-          4,784K: android.hardware.vibrator-service.example (pid 341)
-          4,724K: android.hardware.lights-service.example (pid 337)
-          4,688K: android.hardware.rebootescrow-service.default (pid 340)
-          4,368K: android.hidl.allocator@1.0-service (pid 291)
-          4,356K: abb (pid 2091)
-          3,812K: dumpsys (pid 6166)
-          3,788K: llkd (pid 454)
-          3,580K: dhcpclient (pid 414)
-          3,532K: qemu-props (pid 169)
-          3,488K: ip6tables-restore (pid 306)
-          3,476K: dhcpclient (pid 409)
-          3,460K: createns (pid 274)
-          3,412K: iptables-restore (pid 305)
-          3,364K: logcat (pid 362)
-          3,128K: lmkd (pid 160)
-          3,096K: sh (pid 168)
-          2,768K: tombstoned (pid 279)
-          1,124K: mdnsd (pid 407)
-    375,560K: System
-        375,560K: system (pid 494)
-    892,692K: Persistent
-        274,560K: com.android.systemui (pid 711)
-        155,424K: com.android.phone (pid 1038)
-        137,772K: com.android.networkstack.process (pid 964)
-        112,056K: com.android.emulator.multidisplay (pid 1768)
-        107,008K: com.android.se (pid 1017)
-        105,872K: com.android.ims.rcsservice (pid 1737)
-    272,460K: Persistent Service
-        139,384K: com.android.bluetooth (pid 693)
-        133,076K: com.google.android.providers.media.module (pid 1617)
-    235,752K: Foreground
-        235,752K: com.polylingua.edge (pid 5285 / activities)
-  1,243,220K: Visible
-        269,020K: com.google.android.inputmethod.latin (pid 1419)
-        241,872K: com.google.android.tts (pid 5970)
-        221,372K: com.google.android.apps.nexuslauncher (pid 919 / activities)
-        209,284K: com.google.android.gms.persistent (pid 1152)
-        154,764K: com.google.android.googlequicksearchbox:interactor (pid 1638)
-        146,908K: com.google.android.ext.services (pid 1399)
-    111,696K: Perceptible Low
-        111,696K: com.android.dialer (pid 1470)
-    204,716K: A Services
-        204,716K: com.google.android.gms (pid 1368)
-    112,880K: Previous
-        112,880K: com.google.process.gservices (pid 1624)
-    139,388K: B Services
-        139,388K: com.google.android.ims (pid 3041)
-  2,122,636K: Cached
-        275,860K: com.google.android.googlequicksearchbox:search (pid 1910)
-        190,500K: com.google.android.apps.messaging (pid 3192)
-        186,552K: com.google.android.apps.youtube.music (pid 5528)
-        180,784K: com.google.android.gms.unstable (pid 2815)
-        148,772K: com.google.android.apps.photos (pid 2867)
-        131,464K: com.google.android.gm (pid 5214)
-        120,664K: android.process.media (pid 2017)
-        118,228K: android.process.acore (pid 5668)
-        117,356K: com.google.process.gapps (pid 1985)
-        111,920K: com.google.android.permissioncontroller (pid 5195)
-        111,732K: com.google.android.setupwizard (pid 5478)
-        109,168K: com.google.android.apps.wallpaper (pid 5798)
-        108,096K: com.google.android.partnersetup (pid 2464)
-        106,408K: com.android.providers.calendar (pid 3014)
-        105,132K: com.google.android.syncadapters.contacts (pid 5694)
-
-Total RSS by category:
-  1,800,056K: .so mmap
-  1,609,488K: .apk mmap
-    851,052K: .jar mmap
-    749,308K: .art mmap
-    595,840K: Native
-    480,892K: .oat mmap
-    365,332K: Dalvik
-    199,828K: Other mmap
-     95,380K: Dalvik Other
-     63,720K: Unknown
-     62,300K: .dex mmap
-     34,744K: .ttf mmap
-     34,528K: Stack
-     26,336K: Other dev
-      1,680K: Ashmem
-          0K: Cursor
-          0K: Gfx dev
-          0K: EGL mtrack
-          0K: GL mtrack
-          0K: Other mtrack
-
-Total PSS by process:
-    181,364K: system (pid 494)
-    129,061K: com.google.android.inputmethod.latin (pid 1419)
-    124,921K: com.google.android.tts (pid 5970)
-    122,897K: com.google.android.googlequicksearchbox:search (pid 1910)
-    105,287K: com.android.systemui (pid 711)
-    101,607K: com.polylingua.edge (pid 5285 / activities)
-     74,780K: com.google.android.apps.nexuslauncher (pid 919 / activities)
-     68,505K: com.google.android.apps.messaging (pid 3192)
-     61,517K: com.google.android.gms.persistent (pid 1152)
-     51,373K: com.google.android.gms (pid 1368)
-     50,673K: com.google.android.apps.youtube.music (pid 5528)
-     47,174K: com.google.android.apps.photos (pid 2867)
-     39,993K: com.google.android.gms.unstable (pid 2815)
-     39,630K: zygote (pid 287)
-     36,712K: com.google.android.googlequicksearchbox:interactor (pid 1638)
-     35,412K: com.android.commands.monkey (pid 5950)
-     34,574K: com.google.android.ims (pid 3041)
-     31,768K: com.android.phone (pid 1038)
-     27,017K: zygote64 (pid 286)
-     26,813K: com.google.android.gm (pid 5214)
-     23,731K: com.android.bluetooth (pid 693)
-     22,445K: surfaceflinger (pid 351)
-     20,685K: com.android.networkstack.process (pid 964)
-     18,110K: com.google.android.providers.media.module (pid 1617)
-     16,993K: android.hardware.graphics.composer@2.3-service (pid 304)
-     13,971K: media.swcodec (pid 442)
-     13,855K: com.google.android.apps.wallpaper (pid 5798)
-     13,317K: android.process.acore (pid 5668)
-     13,216K: android.process.media (pid 2017)
-     12,888K: com.google.android.permissioncontroller (pid 5195)
-     12,746K: com.android.dialer (pid 1470)
-     11,372K: com.google.android.ext.services (pid 1399)
-     11,001K: webview_zygote (pid 902)
-     10,994K: media.codec (pid 438)
-      9,962K: com.google.process.gapps (pid 1985)
-      9,694K: com.google.process.gservices (pid 1624)
-      9,684K: com.google.android.setupwizard (pid 5478)
-      9,675K: cameraserver (pid 418)
-      9,320K: com.android.ims.rcsservice (pid 1737)
-      9,098K: com.android.se (pid 1017)
-      9,051K: mediaserver (pid 434)
-      8,989K: logd (pid 159)
-      8,985K: media.extractor (pid 428)
-      8,971K: com.android.emulator.multidisplay (pid 1768)
-      8,945K: com.google.android.syncadapters.contacts (pid 5694)
-      8,571K: wpa_supplicant (pid 690)
-      8,550K: audioserver (pid 377)
-      7,879K: android.hardware.camera.provider@2.4-service (pid 295)
-      7,854K: com.android.providers.calendar (pid 3014)
-      7,696K: libgoldfish-rild (pid 441)
-      7,646K: com.google.android.partnersetup (pid 2464)
-      6,196K: netd (pid 285)
-      6,028K: android.hardware.audio.service.ranchu (pid 292)
-      5,934K: android.hardware.graphics.allocator@3.0-service (pid 303)
-      5,231K: android.hardware.camera.provider@2.6-service-google (pid 296)
-      4,882K: init (pid 1)
-      4,192K: android.hardware.wifi@1.0-service (pid 333)
-      4,132K: iorapd (pid 425)
-      3,934K: android.hardware.keymaster@4.1-service (pid 180)
-      3,445K: vold (pid 172)
-      3,423K: android.hardware.gnss@2.0-service.ranchu (pid 901)
-      3,365K: android.hardware.drm@1.3-service.widevine (pid 301)
-      3,336K: android.hardware.neuralnetworks@1.3-service-sample-float-fast (pid 311)
-      3,290K: android.hardware.neuralnetworks@1.3-service-sample-quant (pid 319)
-      3,273K: android.hardware.neuralnetworks@1.3-service-sample-float-slow (pid 317)
-      3,266K: android.hardware.neuralnetworks@1.3-service-sample-minimal (pid 318)
-      3,211K: media.log (pid 344)
-      3,168K: iorap.prefetcherd (pid 642)
-      3,166K: android.hardware.neuralnetworks@1.3-service-sample-all (pid 309)
-      3,147K: android.hardware.drm@1.0-service (pid 299)
-      3,147K: android.hardware.bluetooth@1.1-service.sim (pid 294)
-      3,080K: adbd (pid 390)
-      2,992K: ueventd (pid 136)
-      2,948K: keystore (pid 427)
-      2,916K: traced_probes (pid 416)
-      2,648K: init (pid 134)
-      2,380K: android.hardware.cas@1.2-service (pid 297)
-      2,347K: media.metrics (pid 433)
-      2,320K: drmserver (pid 419)
-      2,260K: statsd (pid 284)
-      2,248K: android.hardware.drm@1.3-service.clearkey (pid 300)
-      2,230K: android.hardware.identity-service.example (pid 336)
-      2,194K: installd (pid 424)
-      2,190K: wificond (pid 436)
-      1,978K: credstore (pid 345)
-      1,846K: android.hardware.atrace@1.0-service (pid 205)
-      1,826K: android.hardware.sensors@2.1-service.multihal (pid 323)
-      1,824K: hwservicemanager (pid 166)
-      1,638K: traced (pid 417)
-      1,555K: gpuservice (pid 346)
-      1,541K: servicemanager (pid 162)
-      1,532K: gatekeeperd (pid 443)
-      1,494K: android.hardware.health@2.1-service (pid 308)
-      1,418K: storaged (pid 435)
-      1,342K: android.system.suspend@1.0-service (pid 204)
-      1,304K: llkd (pid 454)
-      1,289K: incidentd (pid 422)
-      1,239K: android.hardware.gatekeeper@1.0-service.software (pid 302)
-      1,197K: ip6tables-restore (pid 306)
-      1,184K: iptables-restore (pid 305)
-      1,153K: android.hardware.biometrics.fingerprint@2.1-service (pid 447)
-      1,147K: android.hardware.contexthub@1.1-service.mock (pid 298)
-      1,099K: android.hardware.biometrics.face@1.0-service.example (pid 446)
-      1,093K: sh (pid 168)
-      1,066K: android.hardware.power.stats@1.0-service.mock (pid 320)
-      1,064K: mdnsd (pid 407)
-      1,058K: android.hardware.usb@1.0-service (pid 326)
-      1,053K: android.hardware.thermal@2.0-service.mock (pid 324)
-        975K: qemu-props (pid 169)
-        970K: android.hardware.input.classifier@1.0-service.default (pid 594)
-        961K: abb (pid 2091)
-        948K: android.hardware.vibrator-service.example (pid 341)
-        933K: android.hardware.authsecret@1.0-service (pid 293)
-        898K: android.hardware.power-service.example (pid 338)
-        894K: android.hardware.rebootescrow-service.default (pid 340)
-        886K: android.hardware.lights-service.example (pid 337)
-        836K: logcat (pid 362)
-        796K: android.hidl.allocator@1.0-service (pid 291)
-        789K: dumpsys (pid 6166)
-        788K: lmkd (pid 160)
-        644K: tombstoned (pid 279)
-        612K: dhcpclient (pid 414)
-        606K: dhcpclient (pid 409)
-        601K: createns (pid 274)
-
-Total PSS by OOM adjustment:
-    405,455K: Native
-         39,630K: zygote (pid 287)
-         35,412K: com.android.commands.monkey (pid 5950)
-         27,017K: zygote64 (pid 286)
-         22,445K: surfaceflinger (pid 351)
-         16,993K: android.hardware.graphics.composer@2.3-service (pid 304)
-         13,971K: media.swcodec (pid 442)
-         11,001K: webview_zygote (pid 902)
-         10,994K: media.codec (pid 438)
-          9,675K: cameraserver (pid 418)
-          9,051K: mediaserver (pid 434)
-          8,989K: logd (pid 159)
-          8,985K: media.extractor (pid 428)
-          8,571K: wpa_supplicant (pid 690)
-          8,550K: audioserver (pid 377)
-          7,879K: android.hardware.camera.provider@2.4-service (pid 295)
-          7,696K: libgoldfish-rild (pid 441)
-          6,196K: netd (pid 285)
-          6,028K: android.hardware.audio.service.ranchu (pid 292)
-          5,934K: android.hardware.graphics.allocator@3.0-service (pid 303)
-          5,231K: android.hardware.camera.provider@2.6-service-google (pid 296)
-          4,882K: init (pid 1)
-          4,192K: android.hardware.wifi@1.0-service (pid 333)
-          4,132K: iorapd (pid 425)
-          3,934K: android.hardware.keymaster@4.1-service (pid 180)
-          3,445K: vold (pid 172)
-          3,423K: android.hardware.gnss@2.0-service.ranchu (pid 901)
-          3,365K: android.hardware.drm@1.3-service.widevine (pid 301)
-          3,336K: android.hardware.neuralnetworks@1.3-service-sample-float-fast (pid 311)
-          3,290K: android.hardware.neuralnetworks@1.3-service-sample-quant (pid 319)
-          3,273K: android.hardware.neuralnetworks@1.3-service-sample-float-slow (pid 317)
-          3,266K: android.hardware.neuralnetworks@1.3-service-sample-minimal (pid 318)
-          3,211K: media.log (pid 344)
-          3,168K: iorap.prefetcherd (pid 642)
-          3,166K: android.hardware.neuralnetworks@1.3-service-sample-all (pid 309)
-          3,147K: android.hardware.drm@1.0-service (pid 299)
-          3,147K: android.hardware.bluetooth@1.1-service.sim (pid 294)
-          3,080K: adbd (pid 390)
-          2,992K: ueventd (pid 136)
-          2,948K: keystore (pid 427)
-          2,916K: traced_probes (pid 416)
-          2,648K: init (pid 134)
-          2,380K: android.hardware.cas@1.2-service (pid 297)
-          2,347K: media.metrics (pid 433)
-          2,320K: drmserver (pid 419)
-          2,260K: statsd (pid 284)
-          2,248K: android.hardware.drm@1.3-service.clearkey (pid 300)
-          2,230K: android.hardware.identity-service.example (pid 336)
-          2,194K: installd (pid 424)
-          2,190K: wificond (pid 436)
-          1,978K: credstore (pid 345)
-          1,846K: android.hardware.atrace@1.0-service (pid 205)
-          1,826K: android.hardware.sensors@2.1-service.multihal (pid 323)
-          1,824K: hwservicemanager (pid 166)
-          1,638K: traced (pid 417)
-          1,555K: gpuservice (pid 346)
-          1,541K: servicemanager (pid 162)
-          1,532K: gatekeeperd (pid 443)
-          1,494K: android.hardware.health@2.1-service (pid 308)
-          1,418K: storaged (pid 435)
-          1,342K: android.system.suspend@1.0-service (pid 204)
-          1,304K: llkd (pid 454)
-          1,289K: incidentd (pid 422)
-          1,239K: android.hardware.gatekeeper@1.0-service.software (pid 302)
-          1,197K: ip6tables-restore (pid 306)
-          1,184K: iptables-restore (pid 305)
-          1,153K: android.hardware.biometrics.fingerprint@2.1-service (pid 447)
-          1,147K: android.hardware.contexthub@1.1-service.mock (pid 298)
-          1,099K: android.hardware.biometrics.face@1.0-service.example (pid 446)
-          1,093K: sh (pid 168)
-          1,066K: android.hardware.power.stats@1.0-service.mock (pid 320)
-          1,064K: mdnsd (pid 407)
-          1,058K: android.hardware.usb@1.0-service (pid 326)
-          1,053K: android.hardware.thermal@2.0-service.mock (pid 324)
-            975K: qemu-props (pid 169)
-            970K: android.hardware.input.classifier@1.0-service.default (pid 594)
-            961K: abb (pid 2091)
-            948K: android.hardware.vibrator-service.example (pid 341)
-            933K: android.hardware.authsecret@1.0-service (pid 293)
-            898K: android.hardware.power-service.example (pid 338)
-            894K: android.hardware.rebootescrow-service.default (pid 340)
-            886K: android.hardware.lights-service.example (pid 337)
-            836K: logcat (pid 362)
-            796K: android.hidl.allocator@1.0-service (pid 291)
-            789K: dumpsys (pid 6166)
-            788K: lmkd (pid 160)
-            644K: tombstoned (pid 279)
-            612K: dhcpclient (pid 414)
-            606K: dhcpclient (pid 409)
-            601K: createns (pid 274)
-    181,364K: System
-        181,364K: system (pid 494)
-    185,129K: Persistent
-        105,287K: com.android.systemui (pid 711)
-         31,768K: com.android.phone (pid 1038)
-         20,685K: com.android.networkstack.process (pid 964)
-          9,320K: com.android.ims.rcsservice (pid 1737)
-          9,098K: com.android.se (pid 1017)
-          8,971K: com.android.emulator.multidisplay (pid 1768)
-     41,841K: Persistent Service
-         23,731K: com.android.bluetooth (pid 693)
-         18,110K: com.google.android.providers.media.module (pid 1617)
-    101,607K: Foreground
-        101,607K: com.polylingua.edge (pid 5285 / activities)
-    438,363K: Visible
-        129,061K: com.google.android.inputmethod.latin (pid 1419)
-        124,921K: com.google.android.tts (pid 5970)
-         74,780K: com.google.android.apps.nexuslauncher (pid 919 / activities)
-         61,517K: com.google.android.gms.persistent (pid 1152)
-         36,712K: com.google.android.googlequicksearchbox:interactor (pid 1638)
-         11,372K: com.google.android.ext.services (pid 1399)
-     12,746K: Perceptible Low
-         12,746K: com.android.dialer (pid 1470)
-     51,373K: A Services
-         51,373K: com.google.android.gms (pid 1368)
-      9,694K: Previous
-          9,694K: com.google.process.gservices (pid 1624)
-     34,574K: B Services
-         34,574K: com.google.android.ims (pid 3041)
-    453,422K: Cached
-        122,897K: com.google.android.googlequicksearchbox:search (pid 1910)
-         68,505K: com.google.android.apps.messaging (pid 3192)
-         50,673K: com.google.android.apps.youtube.music (pid 5528)
-         47,174K: com.google.android.apps.photos (pid 2867)
-         39,993K: com.google.android.gms.unstable (pid 2815)
-         26,813K: com.google.android.gm (pid 5214)
-         13,855K: com.google.android.apps.wallpaper (pid 5798)
-         13,317K: android.process.acore (pid 5668)
-         13,216K: android.process.media (pid 2017)
-         12,888K: com.google.android.permissioncontroller (pid 5195)
-          9,962K: com.google.process.gapps (pid 1985)
-          9,684K: com.google.android.setupwizard (pid 5478)
-          8,945K: com.google.android.syncadapters.contacts (pid 5694)
-          7,854K: com.android.providers.calendar (pid 3014)
-          7,646K: com.google.android.partnersetup (pid 2464)
-
-Total PSS by category:
-    489,550K: Native
-    457,058K: .apk mmap
-    292,224K: .so mmap
-    210,395K: Dalvik
-     92,637K: .art mmap
-     64,094K: Other mmap
-     60,817K: .jar mmap
-     60,298K: Dalvik Other
-     49,426K: .dex mmap
-     46,329K: Unknown
-     34,163K: Stack
-     32,552K: .oat mmap
-     21,394K: .ttf mmap
-      4,171K: Other dev
-        460K: Ashmem
-          0K: Cursor
-          0K: Gfx dev
-          0K: EGL mtrack
-          0K: GL mtrack
-          0K: Other mtrack
-
-Total RAM: 4,024,012K (status normal)
- Free RAM: 2,319,974K (  453,422K cached pss + 1,611,860K cached kernel +   254,692K free)
- Used RAM: 1,687,482K (1,462,146K used pss +   225,336K kernel)
- Lost RAM:    16,552K
-     ZRAM:         4K physical used for         0K in swap (3,018,004K total swap)
-   Tuning: 192 (large 576), oom   322,560K, restore limit   107,520K (high-end-gfx)
-// meminfo status was 0
-** Monkey aborted due to error.
-Events injected: 841
+:Sending Touch (ACTION_DOWN): 0:(719.0,1203.0)
+:Sending Touch (ACTION_UP): 0:(697.24646,1231.7233)
+:Sending Touch (ACTION_DOWN): 0:(1076.0,1494.0)
+:Sending Touch (ACTION_UP): 0:(1061.621,1471.9393)
+:Sending Touch (ACTION_DOWN): 0:(966.0,1178.0)
+:Sending Touch (ACTION_UP): 0:(974.77167,1183.4243)
+:Sending Trackball (ACTION_MOVE): 0:(2.0,1.0)
+:Sending Touch (ACTION_DOWN): 0:(839.0,2197.0)
+:Sending Touch (ACTION_UP): 0:(841.52075,2190.5034)
+:Sending Touch (ACTION_DOWN): 0:(573.0,772.0)
+:Sending Touch (ACTION_UP): 0:(571.87537,779.5007)
+:Sending Touch (ACTION_DOWN): 0:(721.0,1785.0)
+:Sending Touch (ACTION_UP): 0:(717.1788,1777.9781)
+:Sending Trackball (ACTION_MOVE): 0:(-2.0,2.0)
+:Sending Touch (ACTION_DOWN): 0:(317.0,2195.0)
+:Sending Touch (ACTION_UP): 0:(316.45444,2194.1008)
+:Sending Trackball (ACTION_MOVE): 0:(-4.0,-3.0)
+    //[calendar_time:2026-10-30 10:38:07.780  system_uptime:202246]
+    // Sending event #900
+:Sending Trackball (ACTION_MOVE): 0:(-2.0,2.0)
+:Sending Trackball (ACTION_UP): 0:(0.0,0.0)
+:Sending Touch (ACTION_DOWN): 0:(197.0,164.0)
+:Sending Touch (ACTION_UP): 0:(202.32271,164.20946)
+:Sending Touch (ACTION_DOWN): 0:(511.0,1808.0)
+:Sending Touch (ACTION_UP): 0:(527.7714,1801.2808)
+:Sending Touch (ACTION_DOWN): 0:(268.0,2112.0)
+:Sending Touch (ACTION_UP): 0:(266.80792,2127.2354)
+:Sending Flip keyboardOpen=false
+Got IOException performing flipjava.io.FileNotFoundException: /dev/input/event0: open failed: EACCES (Permission denied)
+    // Injection Failed
+:Sending Touch (ACTION_DOWN): 0:(821.0,1691.0)
+:Sending Touch (ACTION_UP): 0:(822.2503,1701.7849)
+:Sending Trackball (ACTION_MOVE): 0:(-5.0,0.0)
+:Sending Touch (ACTION_DOWN): 0:(420.0,458.0)
+:Sending Touch (ACTION_UP): 0:(399.6749,440.5215)
+:Sending Flip keyboardOpen=true
+Got IOException performing flipjava.io.FileNotFoundException: /dev/input/event0: open failed: EACCES (Permission denied)
+    // Injection Failed
+:Sending Trackball (ACTION_MOVE): 0:(-5.0,2.0)
+:Sending Touch (ACTION_DOWN): 0:(481.0,1584.0)
+:Sending Touch (ACTION_UP): 0:(588.752,1601.2615)
+:Sending Touch (ACTION_DOWN): 0:(304.0,1869.0)
+:Sending Touch (ACTION_UP): 0:(303.73062,1866.7095)
+:Sending Touch (ACTION_DOWN): 0:(217.0,1026.0)
+:Sending Touch (ACTION_UP): 0:(158.95337,970.2773)
+:Sending Touch (ACTION_DOWN): 0:(816.0,615.0)
+:Sending Touch (ACTION_UP): 0:(816.9486,624.5071)
+:Sending Touch (ACTION_DOWN): 0:(208.0,525.0)
+    //[calendar_time:2026-10-30 10:38:12.277  system_uptime:206743]
+    // Sending event #1000
+:Sending Touch (ACTION_UP): 0:(198.28918,522.8276)
+:Sending Touch (ACTION_DOWN): 0:(171.0,572.0)
+:Sending Touch (ACTION_UP): 0:(105.105156,648.6389)
+:Sending Touch (ACTION_DOWN): 0:(120.0,2251.0)
+:Sending Touch (ACTION_UP): 0:(118.567924,2256.2131)
+:Sending Touch (ACTION_DOWN): 0:(829.0,692.0)
+:Sending Touch (ACTION_UP): 0:(849.02527,689.54193)
+:Sending Touch (ACTION_DOWN): 0:(302.0,1030.0)
+:Sending Touch (ACTION_UP): 0:(302.26932,1030.9486)
+:Sending Touch (ACTION_DOWN): 0:(371.0,8.0)
+:Sending Touch (ACTION_UP): 0:(372.48297,4.118279)
+:Sending Touch (ACTION_DOWN): 0:(818.0,1172.0)
+:Sending Touch (ACTION_UP): 0:(804.82855,1175.7764)
+:Sending Trackball (ACTION_MOVE): 0:(-1.0,-1.0)
+:Sending Touch (ACTION_DOWN): 0:(888.0,1409.0)
+:Sending Touch (ACTION_UP): 0:(887.8223,1415.636)
+:Sending Touch (ACTION_DOWN): 0:(387.0,560.0)
+:Sending Touch (ACTION_UP): 0:(369.76358,598.5687)
+:Sending Touch (ACTION_DOWN): 0:(586.0,1502.0)
+:Sending Touch (ACTION_UP): 0:(585.9446,1523.3433)
+:Sending Trackball (ACTION_MOVE): 0:(1.0,-4.0)
+:Sending Touch (ACTION_DOWN): 0:(697.0,833.0)
+:Sending Touch (ACTION_UP): 0:(706.0439,825.92267)
+:Sending Trackball (ACTION_MOVE): 0:(4.0,-2.0)
+:Sending Touch (ACTION_DOWN): 0:(772.0,1871.0)
+:Sending Touch (ACTION_UP): 0:(806.7752,1908.3871)
+:Sending Trackball (ACTION_MOVE): 0:(4.0,0.0)
+:Sending Touch (ACTION_DOWN): 0:(937.0,1500.0)
+:Sending Touch (ACTION_UP): 0:(952.4337,1508.8981)
+:Sending Touch (ACTION_DOWN): 0:(578.0,978.0)
+:Sending Touch (ACTION_UP): 0:(573.3561,985.3727)
+:Sending Trackball (ACTION_MOVE): 0:(4.0,4.0)
+    //[calendar_time:2026-10-30 10:38:17.123  system_uptime:211589]
+    // Sending event #1100
+:Sending Trackball (ACTION_MOVE): 0:(3.0,1.0)
+:Sending Touch (ACTION_DOWN): 0:(453.0,373.0)
+:Sending Touch (ACTION_UP): 0:(469.05032,367.89307)
+:Sending Touch (ACTION_DOWN): 0:(550.0,727.0)
+:Sending Touch (ACTION_UP): 0:(516.42755,713.6912)
+:Sending Trackball (ACTION_MOVE): 0:(-3.0,0.0)
+:Sending Trackball (ACTION_UP): 0:(0.0,0.0)
+:Sending Touch (ACTION_DOWN): 0:(863.0,1688.0)
+:Sending Touch (ACTION_UP): 0:(877.55347,1691.6598)
+:Sending Touch (ACTION_DOWN): 0:(509.0,1515.0)
+:Sending Touch (ACTION_UP): 0:(497.17438,1527.162)
+:Sending Trackball (ACTION_MOVE): 0:(-5.0,-2.0)
+:Sending Flip keyboardOpen=false
+Got IOException performing flipjava.io.FileNotFoundException: /dev/input/event0: open failed: EACCES (Permission denied)
+    // Injection Failed
+:Sending Touch (ACTION_DOWN): 0:(42.0,959.0)
+:Sending Touch (ACTION_UP): 0:(34.663467,959.03564)
+:Sending Trackball (ACTION_MOVE): 0:(-3.0,-2.0)
+:Sending Touch (ACTION_DOWN): 0:(743.0,2007.0)
+:Sending Touch (ACTION_UP): 0:(727.5485,2001.8041)
+:Sending Trackball (ACTION_MOVE): 0:(3.0,-3.0)
+:Sending Trackball (ACTION_MOVE): 0:(4.0,-1.0)
+Events injected: 1200
 :Sending rotation degree=0, persist=false
-:Dropped: keys=0 pointers=0 trackballs=0 flips=4 rotations=0
-## Network stats: elapsed time=46434ms (0ms mobile, 0ms wifi, 46434ms not connected)
-** System appears to have crashed at event 841 of 1200 using seed 4107
+:Dropped: keys=0 pointers=0 trackballs=0 flips=7 rotations=0
+## Network stats: elapsed time=52873ms (0ms mobile, 0ms wifi, 52873ms not connected)
+// Monkey finished
