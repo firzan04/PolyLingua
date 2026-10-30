@@ -115,7 +115,8 @@ android {
 
     packaging {
         jniLibs {
-            useLegacyPackaging = false
+            // Compressed .so files keep the sideloaded download ~20 MB smaller.
+            useLegacyPackaging = true
             // AGP may package the CMake IMPORTED prebuilts in addition to src/main/jniLibs.
             pickFirsts += listOf(
                 "**/libonnxruntime.so",
@@ -166,7 +167,6 @@ dependencies {
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.animation)
     implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.compose.material.icons)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
