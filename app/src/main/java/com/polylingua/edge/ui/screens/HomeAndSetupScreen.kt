@@ -181,6 +181,10 @@ private fun ReadinessCard(nav: NavHostController, vm: HomeViewModel) {
         }
         Spacer(Modifier.height(10.dp))
         MeterBar(ready.toFloat(), total.toFloat(), if (ready == total) PolyColors.NeonMintSuccess else PolyColors.AmberWarning)
+        if (!com.polylingua.edge.nativebridge.NativeLoader.ensureLoaded()) {
+            Spacer(Modifier.height(10.dp))
+            Banner(com.polylingua.edge.nativebridge.NativeLoader.loadError ?: "On-device AI runtime unavailable", PolyColors.CrimsonAlert)
+        }
         if (vm.asrBackend != AsrBackend.SHERPA_OFFLINE) {
             Spacer(Modifier.height(10.dp))
             Text("Download the essential bundle (~435 MB, once) for fully offline captions, GOP phoneme scoring and neural voices.", style = PolyType.Caption)

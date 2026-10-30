@@ -1,5 +1,6 @@
 package com.polylingua.edge.nativebridge
 
+import android.os.Build
 import android.util.Log
 
 /**
@@ -20,6 +21,16 @@ object NativeLoader {
     @Synchronized
     fun ensureLoaded(): Boolean {
         if (loaded) return true
+        if (loadError != null) return false
+        // x86 Chromebooks / emulators run this arm64-only APK through binary translation, where
+        // ONNX Runtime's cpuinfo initialisation is not reliable. Degrade to the Android speech
+        // services instead of risking a native crash; real arm64 phones load normally.
+        val primaryAbi = Build.SUPPORTED_ABIS.firstOrNull().orEmpty()
+        if (primaryAbi.startsWith("x86")) {
+            loadError = "On-device AI runtime disabled: arm64 libraries cannot run natively on $primaryAbi"
+            Log.w("PolyLinguaNative", loadError!!)
+            return false
+        }
         return try {
             System.loadLibrary("polylingua_native")
             loaded = true
