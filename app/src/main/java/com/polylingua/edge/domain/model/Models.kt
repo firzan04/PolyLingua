@@ -228,6 +228,8 @@ data class SpeechSample(
     val pitch: List<PitchFrame>,
     val pronunciation: PronunciationResult?,
     val referenceText: String? = null,
+    /** Hesitation sounds ("uh", "erm") found acoustically; ASR models usually drop them from text. */
+    val acousticFilledPauses: Int = 0,
 )
 
 data class TaskContext(

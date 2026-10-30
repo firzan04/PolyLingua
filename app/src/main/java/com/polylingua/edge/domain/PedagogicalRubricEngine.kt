@@ -115,8 +115,9 @@ class PedagogicalRubricEngine(private val cefr: CefrLookup) {
     // ------------------------------------------------------------------------------- FC
     fun fluencyMetrics(sample: SpeechSample, warnings: MutableList<String>): FluencyMetrics {
         val tokens = TextAnalysis.words(sample.transcript)
-        val fillers = tokens.count { it in TextAnalysis.FILLED_PAUSES }
-        val nWords = tokens.size - fillers
+        val textFillers = tokens.count { it in TextAnalysis.FILLED_PAUSES }
+        val nWords = tokens.size - textFillers
+        val fillers = textFillers + sample.acousticFilledPauses.coerceAtLeast(0)
         val segments = sample.speechSegments.sortedBy { it.startSec }
         val words = sample.words.sortedBy { it.startSec }
 
@@ -158,7 +159,7 @@ class PedagogicalRubricEngine(private val cefr: CefrLookup) {
             silentPauseCount = pauses,
             silentPausesPerMin = if (minutes > 0) pauses / minutes else 0.0,
             filledPauseCount = fillers,
-            filledPauseRatio = if (tokens.isEmpty()) 0.0 else fillers.toDouble() / tokens.size,
+            filledPauseRatio = if (nWords + fillers <= 0) 0.0 else fillers.toDouble() / (nWords + fillers),
             discourseMarkers = markers.map { it.phrase }.distinct(),
             weightedMarkerVariety = DiscourseMarkerLexicon.weightedVariety(markers),
             meanLengthOfRun = nWords.toDouble() / (pauses + 1),
