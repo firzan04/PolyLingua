@@ -77,6 +77,34 @@ class SessionArtifactStore @Inject constructor(
         }
     }
 
+    /**
+     * Rewrites an existing session's JSON/CSV (e.g. after the offline-AI grammar review) and its
+     * Room row, keeping the same "IELTS_Speaking_Tech_test N" stem and WAV.
+     */
+    suspend fun overwrite(
+        sessionId: Long,
+        stem: String,
+        context: TaskContext,
+        assessment: SpeakingAssessment,
+        sample: SpeechSample,
+        engine: String,
+    ) = mutex.withLock {
+        withContext(CoreExecutors.dsp) {
+            val entity = db.sessionDao().byId(sessionId) ?: return@withContext
+            val wav = File(dir, "$stem.wav").takeIf { it.isFile }
+            val csv = File(dir, "$stem.csv").apply { writeText(AssessmentJson.csv(stem, context, assessment, engine)) }
+            File(dir, "$stem.json").writeText(
+                AssessmentJson.encode(stem, entity.createdAt, context, assessment, sample, engine, wav?.name ?: "", csv.name).toString(2),
+            )
+            db.sessionDao().update(
+                entity.copy(
+                    overallBand = assessment.overallBand, fc = assessment.fc.band, lr = assessment.lr.band,
+                    gra = assessment.gra.band, p = assessment.p.band, cefr = assessment.cefr.name,
+                ),
+            )
+        }
+    }
+
     /** Re-reads a stored JSON (from the vault or an external file) for the dashboard. */
     suspend fun load(file: File): StoredSession = withContext(CoreExecutors.dsp) {
         AssessmentJson.decode(JSONObject(file.readText()))

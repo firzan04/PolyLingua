@@ -197,8 +197,11 @@ data class UtteranceFeedback(
 @Singleton
 class OfflinePersonaEngine @Inject constructor(private val llm: LocalLlmEngine) {
 
-    inner class Conversation(val persona: Persona, private val level: CefrLevel) {
-        private val domains: List<Domain> = persona.domains.mapNotNull { key -> CurriculumContent.ALL.firstOrNull { it.key == key } }
+    inner class Conversation(val persona: Persona, private val level: CefrLevel, val motion: String? = null) {
+        private val debateDomain: Domain? = motion?.let { m -> CurriculumContent.ALL.firstOrNull { d -> d.debate.any { it == m } } }
+        private var debateTurn = 0
+        private val domains: List<Domain> = (listOfNotNull(debateDomain) + persona.domains.mapNotNull { key -> CurriculumContent.ALL.firstOrNull { it.key == key } })
+            .distinctBy { it.key }
             .ifEmpty { CurriculumContent.ALL.take(3) }
         private val asked = HashSet<String>()
         private var domainIndex = 0
@@ -210,6 +213,11 @@ class OfflinePersonaEngine @Inject constructor(private val llm: LocalLlmEngine) 
         val currentTopic: String get() = domains[domainIndex % domains.size].title
 
         fun opening(): String {
+            if (motion != null) {
+                val text = "${persona.greeting} Today's motion: \"$motion\" Which side are you on - for or against - and what's your strongest reason?"
+                history += ChatTurn.assistant(text)
+                return text
+            }
             val q = nextQuestion()
             val text = "${persona.greeting} $q"
             history += ChatTurn.assistant(text)
@@ -247,9 +255,13 @@ class OfflinePersonaEngine @Inject constructor(private val llm: LocalLlmEngine) 
                 "and end with exactly one open follow-up question. Do not correct their grammar (feedback is shown separately). " +
                 "Use vocabulary suitable for ${level.name}${if (level.rank < CefrLevel.B2.rank) ", keep it simple" else ", include some natural idiomatic phrases"}. " +
                 "Favourite topics: $topics."
-            return if (persona.bilingualIndonesian) {
-                "$base You are actually two hosts: Emma (English teacher from Bristol) speaks first; then Budi (tour guide from Jakarta) adds one short helpful tip in Bahasa Indonesia starting with \"Budi:\"."
+            val withDebate = if (motion != null) {
+                "$base This is a friendly Tandem debate on the motion \"$motion\". Take the opposite side to the learner, " +
+                    "give one concise counter-argument with a reason or example, acknowledge any good point they make, and ask them to respond."
             } else base
+            return if (persona.bilingualIndonesian) {
+                "$withDebate You are actually two hosts: Emma (English teacher from Bristol) speaks first; then Budi (tour guide from Jakarta) adds one short helpful tip in Bahasa Indonesia starting with \"Budi:\"."
+            } else withDebate
         }
 
         // ------------------------------------------------------------- rule-based dialogue
@@ -272,7 +284,23 @@ class OfflinePersonaEngine @Inject constructor(private val llm: LocalLlmEngine) 
             return "What else would you like to talk about today?"
         }
 
+        private fun debateReply(user: String): String {
+            val d = debateDomain ?: domains.first()
+            val i = d.ideas
+            val lower = user.lowercase()
+            val userAgainst = listOf("against", "disagree", "shouldn't", "should not", "don't think", "do not think", "oppose", "not a good").any { lower.contains(it) }
+            val counters = if (userAgainst) listOf(i.pos1, i.pos2, i.future, "governments could ${i.policy}")
+            else listOf(i.neg1, i.neg2, "it isn't that simple - ${i.example}, which shows the other side of the coin", "even ${i.idiom.lowercase()} has its limits here")
+            val c = counters[debateTurn % counters.size]
+            val opener = listOf("I see your point, but", "That's fair; however,", "Let me push back a little:", "Interesting argument - and yet")[debateTurn % 4]
+            debateTurn++
+            val ask = listOf("How would you answer that?", "Can you give an example that proves me wrong?", "What would you say to someone who disagrees?", "Is there any compromise you'd accept?")[debateTurn % 4]
+            val tip = if (TextAnalysis.words(user).size < 12) " (Tip: state your claim, give a reason, then an example.)" else ""
+            return "$opener $c. $ask$tip"
+        }
+
         private fun ruleBasedReply(user: String): String {
+            if (motion != null) return debateReply(user)
             val tokens = TextAnalysis.words(user)
             val wordCount = tokens.size
             val lower = user.lowercase()
@@ -308,7 +336,7 @@ class OfflinePersonaEngine @Inject constructor(private val llm: LocalLlmEngine) 
         }
     }
 
-    fun start(persona: Persona, level: CefrLevel): Conversation = Conversation(persona, level)
+    fun start(persona: Persona, level: CefrLevel, motion: String? = null): Conversation = Conversation(persona, level, motion)
 
     /** Local red/green feedback (rules + vocabulary upgrades); refined by the LLM when present. */
     suspend fun feedback(text: String, topic: String, level: CefrLevel, useLlm: Boolean): UtteranceFeedback {

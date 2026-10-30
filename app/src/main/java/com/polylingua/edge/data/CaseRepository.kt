@@ -62,7 +62,7 @@ class CaseRepository @Inject constructor(
     suspend fun casesInPackages(ids: List<Long>): List<PracticeCase> =
         if (ids.isEmpty()) emptyList() else dao.casesInPackages(ids).map { it.toModel() }
 
-    suspend fun case(id: Long): PracticeCase? = dao.case(id)?.toModel()
+    suspend fun caseById(id: Long): PracticeCase? = dao.caseById(id)?.toModel()
 
     suspend fun topics(): List<String> = dao.topics()
 

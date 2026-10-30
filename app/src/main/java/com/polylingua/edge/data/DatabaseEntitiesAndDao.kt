@@ -10,6 +10,7 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.RoomDatabase
 import androidx.room.Transaction
+import androidx.room.Update
 import androidx.room.Upsert
 import com.polylingua.edge.domain.model.CefrLevel
 import com.polylingua.edge.domain.model.ModuleType
@@ -212,7 +213,7 @@ abstract class CaseDao {
     abstract suspend fun randomCasesIn(modules: List<String>, cefr: String, topic: String, limit: Int): List<CaseEntity>
 
     @Query("SELECT * FROM practice_cases WHERE id = :id")
-    abstract suspend fun case(id: Long): CaseEntity?
+    abstract suspend fun caseById(id: Long): CaseEntity?
 
     @Query("SELECT DISTINCT topic FROM practice_cases WHERE topic != '' ORDER BY topic")
     abstract suspend fun topics(): List<String>
@@ -239,6 +240,9 @@ data class ModuleCount(val module: String, val count: Int)
 interface SessionDao {
     @Insert
     suspend fun insert(s: SessionResultEntity): Long
+
+    @Update
+    suspend fun update(s: SessionResultEntity)
 
     @Query("SELECT * FROM session_results ORDER BY createdAt DESC")
     fun all(): Flow<List<SessionResultEntity>>
