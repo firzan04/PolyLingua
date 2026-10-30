@@ -158,7 +158,7 @@ jobs:
           git push origin ci-logs
 
   smoke-test:
-    # Boots an Android 13 x86_64 emulator (ARM64 apps run through binary translation), opens every
+    # Boots an Android 11 x86_64 emulator (ARM64 apps run through binary translation), opens every
     # screen, runs a monkey stress pass and publishes screenshots + logcat to the ci-logs branch.
     needs: build
     if: github.event_name != 'pull_request'
@@ -183,7 +183,7 @@ jobs:
       - name: Run emulator smoke test
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 33
+          api-level: 30
           target: google_apis
           arch: x86_64
           profile: pixel_6

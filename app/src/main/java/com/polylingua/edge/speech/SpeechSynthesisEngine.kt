@@ -20,16 +20,15 @@ import com.polylingua.edge.nativebridge.SherpaNative
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 import java.util.Locale
-import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.min
@@ -285,61 +284,72 @@ class SpeechSynthesisEngine @Inject constructor(
 class PcmPlayer {
     private val _state = MutableStateFlow(PlaybackState())
     val state: StateFlow<PlaybackState> = _state
-    private val stopFlag = AtomicBoolean(false)
+    private val generation = java.util.concurrent.atomic.AtomicInteger(0)
+    private val playLock = kotlinx.coroutines.sync.Mutex()
     @Volatile private var track: AudioTrack? = null
 
+    /**
+     * Plays [clip] (optionally the [startSec]..[endSec] window). A newer call stops the current
+     * clip first; each call carries a generation number so a superseded clip never writes audio
+     * or state after it has been replaced.
+     */
     suspend fun play(clip: AudioClip, label: String = "", startSec: Double = 0.0, endSec: Double = Double.MAX_VALUE) {
-        stop()
-        stopFlag.set(false)
-        withContext(Dispatchers.IO) {
-            val pcm = PcmUtils.floatsToShorts(clip.samples)
-            val from = (startSec * clip.sampleRate).toInt().coerceIn(0, pcm.size)
-            val to = (min(endSec, clip.durationSec) * clip.sampleRate).toInt().coerceIn(from, pcm.size)
-            val minBuf = AudioTrack.getMinBufferSize(clip.sampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
-            val t = AudioTrack.Builder()
-                .setAudioAttributes(
-                    AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build(),
-                )
-                .setAudioFormat(
-                    AudioFormat.Builder().setSampleRate(clip.sampleRate).setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build(),
-                )
-                .setBufferSizeInBytes(minBuf.coerceAtLeast(clip.sampleRate / 5 * 2))
-                .setTransferMode(AudioTrack.MODE_STREAM)
-                .build()
-            track = t
-            val duration = (to - from).toDouble() / clip.sampleRate
-            _state.value = PlaybackState(true, 0.0, duration, label)
-            try {
-                t.play()
-                var pos = from
-                val chunk = clip.sampleRate / 20
-                while (pos < to && !stopFlag.get() && currentCoroutineContext().isActive) {
-                    val n = min(chunk, to - pos)
-                    val w = t.write(pcm, pos, n)
-                    if (w <= 0) break
-                    pos += w
-                    _state.value = PlaybackState(true, (t.playbackHeadPosition.toDouble() / clip.sampleRate).coerceAtMost(duration), duration, label)
+        val gen = generation.incrementAndGet()
+        track?.let { runCatching { it.pause(); it.flush() } }
+        playLock.withLock {
+            if (gen != generation.get()) return
+            withContext(Dispatchers.IO) {
+                val pcm = PcmUtils.floatsToShorts(clip.samples)
+                val from = (startSec * clip.sampleRate).toInt().coerceIn(0, pcm.size)
+                val to = (min(endSec, clip.durationSec) * clip.sampleRate).toInt().coerceIn(from, pcm.size)
+                val minBuf = AudioTrack.getMinBufferSize(clip.sampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
+                val t = AudioTrack.Builder()
+                    .setAudioAttributes(
+                        AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build(),
+                    )
+                    .setAudioFormat(
+                        AudioFormat.Builder().setSampleRate(clip.sampleRate).setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                            .setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build(),
+                    )
+                    .setBufferSizeInBytes(minBuf.coerceAtLeast(clip.sampleRate / 5 * 2))
+                    .setTransferMode(AudioTrack.MODE_STREAM)
+                    .build()
+                track = t
+                val duration = (to - from).toDouble() / clip.sampleRate
+                fun current() = gen == generation.get() && isActive
+                _state.value = PlaybackState(true, 0.0, duration, label)
+                try {
+                    t.play()
+                    var pos = from
+                    val chunk = clip.sampleRate / 20
+                    while (pos < to && current()) {
+                        val n = min(chunk, to - pos)
+                        val w = t.write(pcm, pos, n)
+                        if (w <= 0) break
+                        pos += w
+                        if (current()) _state.value = PlaybackState(true, (t.playbackHeadPosition.toDouble() / clip.sampleRate).coerceAtMost(duration), duration, label)
+                    }
+                    // Drain the device buffer while reporting position.
+                    while (current()) {
+                        val head = t.playbackHeadPosition
+                        _state.value = PlaybackState(true, (head.toDouble() / clip.sampleRate).coerceAtMost(duration), duration, label)
+                        if (head >= to - from) break
+                        kotlinx.coroutines.delay(20)
+                    }
+                } finally {
+                    runCatching { t.stop() }
+                    t.release()
+                    if (track === t) track = null
+                    if (gen == generation.get()) _state.value = PlaybackState(false, 0.0, duration, label)
                 }
-                // Drain the device buffer while reporting position.
-                while (!stopFlag.get() && currentCoroutineContext().isActive) {
-                    val head = t.playbackHeadPosition
-                    _state.value = PlaybackState(true, (head.toDouble() / clip.sampleRate).coerceAtMost(duration), duration, label)
-                    if (head >= to - from) break
-                    kotlinx.coroutines.delay(20)
-                }
-            } finally {
-                runCatching { t.stop() }
-                t.release()
-                if (track === t) track = null
-                _state.value = PlaybackState(false, 0.0, duration, label)
             }
         }
     }
 
     fun stop() {
-        stopFlag.set(true)
+        generation.incrementAndGet()
         track?.let { runCatching { it.pause(); it.flush() } }
+        if (_state.value.playing) _state.value = _state.value.copy(playing = false)
     }
 
     /** Suspends until the current clip ends (used by sequential persona replies). */

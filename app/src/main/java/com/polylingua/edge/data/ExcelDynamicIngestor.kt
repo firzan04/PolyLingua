@@ -73,16 +73,18 @@ class ExcelDynamicIngestor @Inject constructor(
                 if (!c.isNull(1)) size = c.getLong(1)
             }
         }
-        if (!name.lowercase().endsWith(".xlsx") && !name.lowercase().endsWith(".xlsm")) {
-            throw IOException("\"$name\" is not an .xlsx workbook. Save it as Excel Workbook (.xlsx) and try again.")
-        }
         val dir = File(context.cacheDir, "imports").apply { mkdirs() }
         dir.listFiles()?.filter { System.currentTimeMillis() - it.lastModified() > 24 * 3600_000L }?.forEach { it.delete() }
         val safe = name.replace(Regex("[^A-Za-z0-9._ -]"), "_")
         val target = File(dir, "${System.currentTimeMillis()}_$safe")
         resolver.openInputStream(uri)?.use { input -> target.outputStream().use { input.copyTo(it, 256 * 1024) } }
             ?: throw IOException("Cannot open the selected file")
-        val sheets = XlsxWorkbookReader.open(target).use { it.sheets }
+        val sheets = try {
+            XlsxWorkbookReader.open(target).use { it.sheets }
+        } catch (t: Throwable) {
+            target.delete()
+            throw IOException("\"$name\" is not a valid Excel workbook (.xlsx). Older .xls files must be re-saved as .xlsx.")
+        }
         if (sheets.isEmpty()) throw IOException("The workbook has no worksheets")
         WorkbookPreview(target, name, if (size > 0) size else target.length(), sheets)
     }

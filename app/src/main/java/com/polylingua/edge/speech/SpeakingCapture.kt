@@ -131,6 +131,8 @@ class SpeakingCaptureController @Inject constructor(
     suspend fun begin(scope: CoroutineScope, detail: String, conversation: Boolean = false): ActiveCapture? {
         val s = settings.settings.value
         if (asr.backend() == AsrBackend.SHERPA_OFFLINE) {
+            // Load the models before opening the mic so the first words are not lost.
+            asr.prepare()
             if (!recorder.start(s.sidetoneEnabled, s.sidetoneGain)) return null
         }
         PolyLinguaForegroundService.acquire(context, PolyLinguaForegroundService.Reason.RECORDING, detail)

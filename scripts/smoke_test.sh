@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Emulator smoke test used by CI (x86_64 Android 13 image with ARM64 binary translation):
+# Emulator smoke test used by CI (x86_64 Android 11 image with ARM64 binary translation):
 # installs the release APK, opens every screen through the launcher-shortcut "route" extra,
 # captures screenshots, runs a monkey stress pass and fails on any crash or ANR.
 #   scripts/smoke_test.sh <apk> <output-dir>
@@ -14,6 +14,7 @@ log() { echo "$*" | tee -a "$SUMMARY"; }
 
 adb wait-for-device
 adb shell getprop ro.product.cpu.abilist | tee -a "$SUMMARY"
+adb shell getprop ro.dalvik.vm.native.bridge | tee -a "$SUMMARY"
 adb shell settings put global window_animation_scale 0
 adb shell settings put global transition_animation_scale 0
 adb shell settings put global animator_duration_scale 0
