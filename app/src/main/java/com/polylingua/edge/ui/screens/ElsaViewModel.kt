@@ -107,6 +107,7 @@ class ElsaViewModel @Inject constructor(
     private var stopJob: Job? = null
 
     init {
+        viewModelScope.launch { capture.preload() }
         viewModelScope.launch {
             repository.ensureBuiltInSeeded()
             val c = if (caseId > 0) repository.caseById(caseId) else null

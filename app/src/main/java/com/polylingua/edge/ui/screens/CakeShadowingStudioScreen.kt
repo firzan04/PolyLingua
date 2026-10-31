@@ -42,6 +42,9 @@ import androidx.navigation.NavHostController
 import com.polylingua.edge.ui.components.AbLoopTimeline
 import com.polylingua.edge.ui.components.Banner
 import com.polylingua.edge.ui.components.ChoiceChips
+import com.polylingua.edge.ui.components.CountdownNumeral
+import com.polylingua.edge.ui.components.LabeledProgress
+import com.polylingua.edge.ui.components.WaveformOverlayCanvas
 import com.polylingua.edge.ui.components.FrostedCard
 import com.polylingua.edge.ui.components.GhostButton
 import com.polylingua.edge.ui.components.IconCircleButton
@@ -127,6 +130,18 @@ fun CakeShadowingStudioScreen(nav: NavHostController, vm: CakeViewModel = hiltVi
                                 GhostButton(if (st.media?.subtitleUri != null) "Replace EN subtitles" else "+ English .srt/.vtt", { subPicker.launch(subtitleMimes) }, Modifier.weight(1f))
                                 GhostButton(if (st.media?.translationUri != null) "Replace ID subs" else "+ Indonesian subs", { trPicker.launch(subtitleMimes) }, Modifier.weight(1f), color = PolyColors.AmberWarning)
                             }
+                            Spacer(Modifier.height(6.dp))
+                            val t = st.transcribing
+                            if (t != null) {
+                                LabeledProgress("Transcribing offline… ${(t * 100).toInt()} %", t)
+                            } else {
+                                PrimaryButton(
+                                    if (st.cues.isEmpty()) "Auto-transcribe offline (creates the lesson)" else "Re-transcribe offline",
+                                    vm::autoTranscribe, Modifier.fillMaxWidth(), icon = PolyIcons.Sparkle,
+                                    color = if (st.cues.isEmpty()) PolyColors.ElectricTeal else PolyColors.MutedSlateText,
+                                )
+                                Text("Speech recognition + word timing on this phone (first 20 minutes). Works for .mp4, .mkv, .mp3, .wav, .m4a.", style = PolyType.Caption)
+                            }
                         }
                     }
                 }
@@ -165,8 +180,20 @@ fun CakeShadowingStudioScreen(nav: NavHostController, vm: CakeViewModel = hiltVi
             item { TransportCard(st, vm) }
             item {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                    PulsingMicButton(st.recording, live.levelDb, vm::toggleShadow, enabled = !st.analysing && st.currentCue != null)
-                    Text(if (st.recording) "Shadowing… tap to finish" else "Listen, then tap to shadow the line", style = PolyType.Caption)
+                    val sequence = st.shadowStage == "Listen…" || st.countdown != null
+                    if (!st.recording && !st.analysing) {
+                        if (sequence) {
+                            GhostButton("Cancel", vm::cancelShadowSequence, color = PolyColors.MutedSlateText)
+                        } else {
+                            PrimaryButton("▶ Shadow this line", vm::shadowThisLine, Modifier.fillMaxWidth(), icon = PolyIcons.Loop, enabled = st.currentCue != null)
+                            Text("Plays the native line, counts 3-2-1, then records you.", style = PolyType.Caption)
+                        }
+                        Spacer(Modifier.height(10.dp))
+                    }
+                    st.countdown?.let { n -> CountdownNumeral(n); Spacer(Modifier.height(8.dp)) }
+                    st.shadowStage?.let { stage -> Text(stage, style = PolyType.CardTitle.copy(color = if (stage == "Speak!") PolyColors.CrimsonAlert else PolyColors.AmberWarning)) }
+                    PulsingMicButton(st.recording, live.levelDb, vm::toggleShadow, enabled = !st.analysing && st.currentCue != null && !sequence)
+                    Text(if (st.recording) "Shadowing… tap to finish" else "Or tap the mic to shadow without the countdown", style = PolyType.Caption)
                     if (st.recording) Text(live.transcript.text, style = PolyType.Body, maxLines = 3)
                     if (st.analysing) Row(verticalAlignment = Alignment.CenterVertically) {
                         CircularProgressIndicator(color = PolyColors.ElectricTeal, modifier = Modifier.padding(end = 8.dp))
@@ -191,9 +218,16 @@ fun CakeShadowingStudioScreen(nav: NavHostController, vm: CakeViewModel = hiltVi
                             StatTile("Intonation 35%", "${o.score.intonationSimilarity.toInt()}", Modifier.weight(1f), color = PolyColors.forScore(o.score.intonationSimilarity))
                             StatTile("Rhythm 25%", "${o.score.rhythmSync.toInt()}", Modifier.weight(1f), color = PolyColors.forScore(o.score.rhythmSync))
                         }
+                        val ref = st.refEnvelope
+                        val mine = st.userEnvelope
+                        if (ref != null && mine != null) {
+                            Spacer(Modifier.height(8.dp))
+                            Text("Waveform: you (teal) over the native line (amber)", style = PolyType.Caption)
+                            WaveformOverlayCanvas(ref, mine)
+                        }
                         if (o.userPitch.isNotEmpty()) {
                             Spacer(Modifier.height(8.dp))
-                            Text("You (teal) vs native (amber)", style = PolyType.Caption)
+                            Text("Pitch: you (teal) vs native (amber)", style = PolyType.Caption)
                             PitchContourCanvas(pitchToArray(o.userPitch), reference = if (o.referencePitch.isNotEmpty()) pitchToArray(o.referencePitch) else null)
                         }
                     }

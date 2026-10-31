@@ -34,6 +34,9 @@ data class DashboardPayload(
     val sessionId: Long?,
     val audio: FloatArray?,
     val caseId: Long?,
+    /** Absolute path of the interview video (front camera), when recorded. */
+    val videoPath: String? = null,
+    val bodyLanguage: com.polylingua.edge.domain.model.BodyLanguageReport? = null,
 )
 
 /** Hands assessment results from the arena / history vault to the dashboard. */

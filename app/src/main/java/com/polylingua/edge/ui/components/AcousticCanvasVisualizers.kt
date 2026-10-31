@@ -409,3 +409,27 @@ fun CountdownNumeral(value: Int, modifier: Modifier = Modifier) {
         Text(if (value > 0) "$value" else "GO", style = PolyType.NumericLarge.copy(fontSize = 72.sp, color = PolyColors.ElectricTeal, fontWeight = FontWeight.ExtraBold), modifier = Modifier.scale(scale))
     }
 }
+
+/**
+ * Cake-style overlay: the native speaker's loudness envelope (amber, behind) with the learner's
+ * take (teal, in front), both trimmed to the spoken part so rhythm and stress line up visually.
+ */
+@Composable
+fun WaveformOverlayCanvas(reference: FloatArray, user: FloatArray, modifier: Modifier = Modifier) {
+    Canvas(modifier.fillMaxWidth().height(96.dp)) {
+        val mid = size.height / 2f
+        fun drawEnvelope(env: FloatArray, color: Color, widthFraction: Float) {
+            if (env.isEmpty()) return
+            val step = size.width / env.size
+            val barW = (step * widthFraction).coerceAtLeast(1f)
+            env.forEachIndexed { i, v ->
+                val h = (v.coerceIn(0f, 1f) * (mid - 2f)).coerceAtLeast(1f)
+                val x = i * step + (step - barW) / 2f
+                drawRect(color, topLeft = androidx.compose.ui.geometry.Offset(x, mid - h), size = androidx.compose.ui.geometry.Size(barW, h * 2f))
+            }
+        }
+        drawLine(PolyColors.FrostedBorder, androidx.compose.ui.geometry.Offset(0f, mid), androidx.compose.ui.geometry.Offset(size.width, mid), strokeWidth = 1f)
+        drawEnvelope(reference, PolyColors.AmberWarning.copy(alpha = 0.55f), 0.9f)
+        drawEnvelope(user, PolyColors.ElectricTeal.copy(alpha = 0.85f), 0.45f)
+    }
+}

@@ -19,6 +19,7 @@ import com.polylingua.edge.data.PolyLinguaDatabase
 import com.polylingua.edge.data.ShadowingAttemptEntity
 import com.polylingua.edge.domain.model.ModuleType
 import com.polylingua.edge.domain.model.PracticeCase
+import com.polylingua.edge.dsp.PcmUtils
 import com.polylingua.edge.dsp.TarsosWsolaTimeStretcher
 import com.polylingua.edge.media.MediaPcmExtractor
 import com.polylingua.edge.media.MediaUtils
@@ -66,6 +67,15 @@ data class CakeUiState(
     val message: String? = null,
     val showIpa: Boolean = true,
     val showTranslation: Boolean = true,
+    /** 0..1 while an imported video/audio is being auto-transcribed offline. */
+    val transcribing: Float? = null,
+    /** "Listen…" / "Speak!" stage of the Shadow-This-Line sequence. */
+    val shadowStage: String? = null,
+    /** 3-2-1 pulse before recording. */
+    val countdown: Int? = null,
+    /** Loudness envelopes for the waveform overlay (native vs learner), 0..1. */
+    val refEnvelope: FloatArray? = null,
+    val userEnvelope: FloatArray? = null,
 ) {
     val currentCue: ShadowCue? get() = cues.getOrNull(cueIndex)
 }
@@ -84,6 +94,7 @@ class CakeViewModel @Inject constructor(
     private val pipeline: AssessmentPipeline,
     private val resources: LinguisticResources,
     private val settings: AppSettings,
+    private val asr: com.polylingua.edge.speech.SpeechRecognitionEngine,
     net: com.polylingua.edge.network.ConnectivityAndWebRtcManager,
     db: PolyLinguaDatabase,
 ) : ViewModel() {
@@ -127,6 +138,7 @@ class CakeViewModel @Inject constructor(
             repository.ensureBuiltInSeeded()
             loadSentences()
         }
+        viewModelScope.launch { capture.preload() }
         ticker = viewModelScope.launch {
             while (isActive) {
                 tick()
@@ -234,8 +246,103 @@ class CakeViewModel @Inject constructor(
             if (m.lastPositionMs > 0) player.seekTo(m.lastPositionMs)
             player.playbackParameters = PlaybackParameters(_state.value.speed)
             _state.value = _state.value.copy(source = 1, media = m, cues = cues, cueIndex = 0, outcome = null, durationMs = m.durationMs,
-                message = if (cues.isEmpty()) "Attach an English .srt/.vtt subtitle file to shadow line by line." else null)
+                refEnvelope = null, userEnvelope = null,
+                message = if (cues.isEmpty()) "No subtitles yet: tap \"Auto-transcribe offline\" to create English lines from the audio, or attach an .srt/.vtt file." else null)
         }
+    }
+
+    /**
+     * Offline auto-subtitles for an imported video/audio: decode the audio track (<= 20 min),
+     * find speech with VAD, transcribe each line with the final-pass recogniser, save an .srt and
+     * open it as a Cake lesson (IPA per line; pitch is extracted per line when you shadow it).
+     */
+    fun autoTranscribe() {
+        val m = _state.value.media ?: return
+        if (_state.value.transcribing != null) return
+        stopPlayback()
+        viewModelScope.launch {
+            _state.value = _state.value.copy(transcribing = 0f, message = null)
+            PolyLinguaForegroundService.acquire(context, PolyLinguaForegroundService.Reason.INDEXING, "Transcribing ${m.title}")
+            try {
+                val pcm = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    MediaPcmExtractor.extractAll(context, Uri.parse(m.uri), maxSec = 20 * 60) { p -> _state.value = _state.value.copy(transcribing = p * 0.2f) }
+                } ?: error("this file has no readable audio track")
+                val lines = asr.transcribeLong(pcm) { p -> _state.value = _state.value.copy(transcribing = 0.2f + p * 0.8f) }
+                if (lines.isEmpty()) error("no speech was found")
+                val file = java.io.File(context.filesDir, "subtitles/media_${m.id}.srt")
+                withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    file.parentFile?.mkdirs()
+                    file.writeText(com.polylingua.edge.media.SubtitleWriter.toSrt(lines))
+                }
+                val uri = Uri.fromFile(file).toString()
+                mediaDao.setSubtitles(m.id, uri, m.translationUri)
+                openMedia(m.copy(subtitleUri = uri))
+                com.polylingua.edge.core.UserNotices.post(
+                    "Created ${lines.size} English lines offline${if (pcm.size >= 16000 * 20 * 60) " (first 20 minutes)" else ""}.",
+                    com.polylingua.edge.core.UserNotices.Kind.SUCCESS,
+                )
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (t: Throwable) {
+                _state.value = _state.value.copy(message = "Auto-transcription failed: ${t.message}")
+            } finally {
+                PolyLinguaForegroundService.release(context, PolyLinguaForegroundService.Reason.INDEXING)
+                _state.value = _state.value.copy(transcribing = null)
+            }
+        }
+    }
+
+    private var shadowJob: Job? = null
+
+    /**
+     * Cake-style "Shadow This Line": plays the native line, shows a 3-2-1 pulse, then records the
+     * learner and overlays their waveform and pitch on the native actor's.
+     */
+    fun shadowThisLine() {
+        val st = _state.value
+        if (st.recording || st.analysing || shadowJob?.isActive == true) return
+        val cue = st.currentCue ?: return
+        stoppedByUser = false
+        shadowJob = viewModelScope.launch {
+            _state.value = _state.value.copy(shadowStage = "Listen…", outcome = null, refEnvelope = null, userEnvelope = null)
+            if (st.source == 1 && st.media != null) {
+                player.playbackParameters = PlaybackParameters(st.speed)
+                player.seekTo(cue.startMs)
+                player.play()
+                val maxWait = ((cue.endMs - cue.startMs) / st.speed).toLong() + 2500L
+                kotlinx.coroutines.withTimeoutOrNull(maxWait) {
+                    while (isActive && player.currentPosition < cue.endMs) delay(25)
+                }
+                player.pause()
+            } else {
+                val base = ensureClip()
+                if (base == null) {
+                    _state.value = _state.value.copy(shadowStage = null, message = "No voice available - install a neural voice or enable Android TTS.")
+                    return@launch
+                }
+                val sp = st.speed.toDouble()
+                val c = if (sp == 1.0) base else withContext(CoreExecutors.dsp) {
+                    AudioClip(TarsosWsolaTimeStretcher.stretch(base.samples, base.sampleRate, sp), base.sampleRate)
+                }
+                tts.player.play(c, "Shadowing model")
+            }
+            if (stoppedByUser) {
+                _state.value = _state.value.copy(shadowStage = null)
+                return@launch
+            }
+            for (n in 3 downTo 1) {
+                _state.value = _state.value.copy(shadowStage = null, countdown = n)
+                delay(650)
+            }
+            _state.value = _state.value.copy(countdown = null, shadowStage = "Speak!")
+            startShadow()
+        }
+    }
+
+    fun cancelShadowSequence() {
+        shadowJob?.cancel()
+        stopPlayback()
+        _state.value = _state.value.copy(shadowStage = null, countdown = null)
     }
 
     // --------------------------------------------------------------------- transport
@@ -381,6 +488,10 @@ class CakeViewModel @Inject constructor(
                 withContext(CoreExecutors.dsp) { MediaPcmExtractor.extract(context, Uri.parse(st.media.uri), cue.startMs, cue.endMs) }
             } else ensureClip()
             val outcome = runCatching { pipeline.assessShadowing(captured, cue.text, reference) }.getOrNull()
+            val (refEnv, userEnv) = withContext(CoreExecutors.dsp) {
+                reference?.let { PcmUtils.speechEnvelope(it.samples, it.sampleRate) } to
+                    captured.audio.takeIf { it.isNotEmpty() }?.let { PcmUtils.speechEnvelope(PcmUtils.shortsToFloats(it), 16000) }
+            }
             if (outcome != null) {
                 studyDao.insertShadowing(
                     ShadowingAttemptEntity(
@@ -391,7 +502,8 @@ class CakeViewModel @Inject constructor(
                     ),
                 )
             }
-            _state.value = _state.value.copy(analysing = false, outcome = outcome,
+            _state.value = _state.value.copy(analysing = false, outcome = outcome, shadowStage = null,
+                refEnvelope = refEnv, userEnvelope = userEnv,
                 message = if (outcome == null) "Could not score this take - try again." else null)
         }
     }
@@ -405,6 +517,7 @@ class CakeViewModel @Inject constructor(
     fun consumeMessage() { _state.value = _state.value.copy(message = null) }
 
     override fun onCleared() {
+        shadowJob?.cancel()
         ticker?.cancel()
         autoStop?.cancel()
         liveJob?.cancel()

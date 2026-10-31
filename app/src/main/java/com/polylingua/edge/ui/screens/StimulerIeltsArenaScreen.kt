@@ -1,6 +1,22 @@
 package com.polylingua.edge.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.view.PreviewView
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+import com.polylingua.edge.core.UserNotices
+import com.polylingua.edge.media.VideoInterviewRecorder
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -55,6 +71,24 @@ fun StimulerIeltsArenaScreen(nav: NavHostController, vm: ArenaViewModel = hiltVi
     val st by vm.state.collectAsStateWithLifecycle()
     val live by vm.live.collectAsStateWithLifecycle()
     val wave by vm.waveform.collectAsStateWithLifecycle()
+    val videoStatus by vm.videoStatus.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val hasCamera = { ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED }
+    val cameraPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        vm.setVideoMode(granted)
+        if (!granted) UserNotices.post("Camera permission is needed for the video interview.", UserNotices.Kind.WARNING)
+    }
+    val onVideoToggle: (Boolean) -> Unit = { on ->
+        when {
+            !on -> vm.setVideoMode(false)
+            hasCamera() -> vm.setVideoMode(true)
+            else -> cameraPermission.launch(Manifest.permission.CAMERA)
+        }
+    }
+    LaunchedEffect(Unit) {
+        // Restore the saved preference only when the permission is still granted.
+        if (st.videoMode) { if (hasCamera()) vm.openCamera() else vm.setVideoMode(false) }
+    }
     LaunchedEffect(st.phase) {
         if (st.phase == ArenaPhase.DONE) {
             nav.navigate(Routes.DASHBOARD) { popUpTo(Routes.HOME) }
@@ -82,11 +116,14 @@ fun StimulerIeltsArenaScreen(nav: NavHostController, vm: ArenaViewModel = hiltVi
                     GhostButton("Install", { nav.navigate(Routes.SETUP) }, color = PolyColors.AmberWarning)
                 }
             }
+            val showCamera = st.videoMode && st.phase !in setOf(ArenaPhase.LOADING, ArenaPhase.DONE, ArenaPhase.ERROR) &&
+                videoStatus.phase != VideoInterviewRecorder.Phase.CLOSED
+            if (showCamera) CameraCard(vm, videoStatus)
             if (q != null && st.phase != ArenaPhase.ANALYSING) QuestionCard(q, st.phase == ArenaPhase.PREP || st.phase == ArenaPhase.READY)
             AnimatedContent(st.phase, label = "phase") { phase ->
                 when (phase) {
                     ArenaPhase.LOADING -> Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = PolyColors.ElectricTeal) }
-                    ArenaPhase.READY -> ReadyPanel(st, vm)
+                    ArenaPhase.READY -> ReadyPanel(st, vm, onVideoToggle)
                     ArenaPhase.COUNTDOWN -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CountdownNumeral(st.countdown) }
                     ArenaPhase.EXAMINER -> FrostedCard(accent = PolyColors.AmberWarning) {
                         Text("🎙️ The examiner is reading the question…", style = PolyType.CardTitle)
@@ -142,9 +179,54 @@ private fun QuestionCard(q: ArenaQuestion, showNotes: Boolean) {
 }
 
 @Composable
-private fun ReadyPanel(st: ArenaUiState, vm: ArenaViewModel) {
+private fun CameraCard(vm: ArenaViewModel, status: VideoInterviewRecorder.Status) {
+    val context = LocalContext.current
+    val previewView = remember {
+        PreviewView(context).apply {
+            scaleType = PreviewView.ScaleType.FILL_CENTER
+            // TextureView-backed preview behaves inside scrolling Compose layouts.
+            implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+        }
+    }
+    DisposableEffect(previewView) {
+        vm.video.attachPreview(previewView)
+        onDispose { vm.video.detachPreview(previewView) }
+    }
+    val recording = status.phase == VideoInterviewRecorder.Phase.RECORDING
+    FrostedCard(padding = 8.dp, accent = if (recording) PolyColors.CrimsonAlert else PolyColors.ElectricTeal) {
+        Box(Modifier.fillMaxWidth().height(240.dp).clip(RoundedCornerShape(12.dp)).background(Color.Black)) {
+            AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
+            val (label, color) = when (status.phase) {
+                VideoInterviewRecorder.Phase.RECORDING -> "● REC %d:%02d".format(status.elapsedSec.toInt() / 60, status.elapsedSec.toInt() % 60) to PolyColors.CrimsonAlert
+                VideoInterviewRecorder.Phase.READY -> "CAMERA READY" to PolyColors.NeonMintSuccess
+                VideoInterviewRecorder.Phase.OPENING -> "OPENING CAMERA…" to PolyColors.AmberWarning
+                VideoInterviewRecorder.Phase.FINALIZING -> "SAVING VIDEO…" to PolyColors.AmberWarning
+                VideoInterviewRecorder.Phase.ERROR -> "CAMERA ERROR" to PolyColors.CrimsonAlert
+                VideoInterviewRecorder.Phase.CLOSED -> "CAMERA OFF" to PolyColors.MutedSlateText
+            }
+            PillBadge(label, color, Modifier.align(Alignment.TopStart).padding(8.dp), filled = true)
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            if (status.phase == VideoInterviewRecorder.Phase.ERROR) status.message
+            else "Look into the lens as if it were the examiner. The video (with the examiner's questions and your answers) and an eye-contact report are saved with your results.",
+            style = PolyType.Caption,
+        )
+    }
+}
+
+@Composable
+private fun ReadyPanel(st: ArenaUiState, vm: ArenaViewModel, onVideoToggle: (Boolean) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         FrostedCard {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("🎥 Video interview", style = PolyType.Body)
+                    Text("Front camera records you (1080p): watch yourself back and get an eye-contact, expression and head-movement report", style = PolyType.Caption)
+                }
+                Switch(st.videoMode, onVideoToggle, colors = SwitchDefaults.colors(checkedTrackColor = PolyColors.CrimsonAlert))
+            }
+            Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("Examiner voice", style = PolyType.Body)
@@ -158,7 +240,7 @@ private fun ReadyPanel(st: ArenaUiState, vm: ArenaViewModel) {
                 else "Speak for the full minute: extend with a reason, an example and a short conclusion.",
                 style = PolyType.Caption,
             )
-            Text("Engine: ${st.backend.label}", style = PolyType.Caption.copy(color = PolyColors.ElectricTeal))
+            Text("Speech engine: ${st.engineSummary.ifBlank { st.backend.label }}", style = PolyType.Caption.copy(color = PolyColors.ElectricTeal))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             PrimaryButton("Start (3-s countdown)", vm::start, Modifier.weight(1f), icon = PolyIcons.Play)

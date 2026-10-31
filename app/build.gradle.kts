@@ -184,6 +184,8 @@ dependencies {
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.video)
     implementation(libs.androidx.camera.view)
+    // Offline (bundled-model) face detection for the video interview's body-language report
+    implementation(libs.mlkit.face.detection)
 
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.documentfile)

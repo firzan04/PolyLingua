@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
@@ -103,7 +104,7 @@ class TandemViewModel @Inject constructor(
         when (_mode.value) {
             TandemMode.ONLINE -> net.leaveOnlineLobby()
             TandemMode.LAN -> net.stopLan()
-            TandemMode.PERSONA -> { tts.stop(); recordJob?.cancel(); activeCapture?.abort(); activeCapture = null; _recording.value = false }
+            TandemMode.PERSONA -> { handsFreeJob?.cancel(); _handsFree.value = false; tts.stop(); recordJob?.cancel(); activeCapture?.abort(); activeCapture = null; _recording.value = false }
             TandemMode.HUB -> Unit
         }
         _mode.value = TandemMode.HUB
@@ -200,17 +201,78 @@ class TandemViewModel @Inject constructor(
             runCatching { conv.reply(clean).collect { partial -> reply = partial; _streaming.value = partial } }
                 .onFailure { _error.value = "Reply failed: ${it.message}" }
             _streaming.value = ""
+            var speaking: Job? = null
             if (reply.isNotBlank()) {
                 chatDao.insert(ChatMessageEntity(personaId = tid, role = "assistant", text = reply, createdAt = System.currentTimeMillis()))
-                speak(p, reply)
+                speaking = speak(p, reply)
             }
             _busy.value = false
+            if (_handsFree.value) {
+                // Live talk: listen again as soon as the partner has finished speaking.
+                speaking?.join()
+                startHandsFreeTurn()
+            }
         }
     }
 
-    private fun speak(p: Persona, text: String) {
-        if (!_speakReplies.value) return
-        viewModelScope.launch {
+    // ------------------------------------------------------------- live talk (hands-free)
+
+    private val _handsFree = MutableStateFlow(false)
+    /** Gemini-Live-style turn taking: the mic reopens after each reply; a pause ends your turn. */
+    val handsFree: StateFlow<Boolean> = _handsFree
+    private var handsFreeJob: Job? = null
+
+    val turnEndSec: Float get() = settings.settings.value.turnEndSilenceSec
+
+    init {
+        viewModelScope.launch { capture.preload() }
+    }
+
+    fun setHandsFree(on: Boolean) {
+        _handsFree.value = on
+        if (on) {
+            startHandsFreeTurn()
+        } else {
+            handsFreeJob?.cancel()
+            if (_recording.value) {
+                activeCapture?.abort()
+                activeCapture = null
+                recordJob?.cancel()
+                _recording.value = false
+            }
+        }
+    }
+
+    private fun startHandsFreeTurn() {
+        if (!_handsFree.value || _recording.value || _busy.value || _persona.value == null) return
+        handsFreeJob?.cancel()
+        handsFreeJob = viewModelScope.launch {
+            tts.player.awaitIdle()
+            if (!_handsFree.value || _recording.value || _busy.value) return@launch
+            val cap = capture.begin(viewModelScope, "Live talk with ${_persona.value?.name ?: "partner"}", conversation = true)
+            if (cap == null) {
+                _error.value = "Microphone or offline speech pack unavailable."
+                _handsFree.value = false
+                return@launch
+            }
+            activeCapture = cap
+            _recording.value = true
+            recordJob = viewModelScope.launch { cap.live.collect { _live.value = it } }
+            // Suspends until you stop talking for the configured pause (endpoint detection).
+            val heard = cap.utterances.first()
+            if (activeCapture !== cap) return@launch
+            activeCapture = null
+            _recording.value = false
+            val captured = cap.end()
+            recordJob?.cancel()
+            val text = captured.transcript.text.ifBlank { heard }.trim()
+            if (text.isBlank()) startHandsFreeTurn() else send(text)
+        }
+    }
+
+    private fun speak(p: Persona, text: String): Job? {
+        if (!_speakReplies.value) return null
+        return viewModelScope.launch {
             if (p.bilingualIndonesian && text.contains("Budi:")) {
                 val english = text.substringBefore("Budi:").trim()
                 val indo = text.substringAfter("Budi:").trim()
@@ -232,6 +294,7 @@ class TandemViewModel @Inject constructor(
 
     /** Push-to-talk: first tap records, second tap transcribes and sends. */
     fun toggleVoice() {
+        handsFreeJob?.cancel()
         if (_recording.value) {
             val cap = activeCapture ?: return
             activeCapture = null
@@ -262,6 +325,7 @@ class TandemViewModel @Inject constructor(
     fun diffFor(m: ChatMessageEntity) = if (m.correctedText.isBlank()) emptyList() else WordDiff.diff(m.text, m.correctedText)
 
     override fun onCleared() {
+        handsFreeJob?.cancel()
         tts.stop()
         recordJob?.cancel()
         activeCapture?.abort()

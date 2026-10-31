@@ -1,14 +1,18 @@
 package com.polylingua.edge.ui.screens
 
+import android.content.Context
+import android.os.SystemClock
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.polylingua.edge.core.AppSettings
 import com.polylingua.edge.core.CoreExecutors
+import com.polylingua.edge.core.UserNotices
 import com.polylingua.edge.core.LinguisticResources
 import com.polylingua.edge.data.CaseRepository
 import com.polylingua.edge.data.SessionArtifactStore
 import com.polylingua.edge.domain.TextAnalysis
+import com.polylingua.edge.domain.model.BodyLanguageReport
 import com.polylingua.edge.domain.model.ModuleType
 import com.polylingua.edge.domain.model.PracticeCase
 import com.polylingua.edge.domain.model.SpeechSegment
@@ -16,6 +20,10 @@ import com.polylingua.edge.domain.model.TaskContext
 import com.polylingua.edge.domain.model.WordTiming
 import com.polylingua.edge.dsp.OboeAudioRecorder
 import com.polylingua.edge.dsp.PcmUtils
+import com.polylingua.edge.media.BodyLanguageAnalyzer
+import com.polylingua.edge.media.Mp4AudioMuxer
+import com.polylingua.edge.media.SessionAudioTimeline
+import com.polylingua.edge.media.VideoInterviewRecorder
 import com.polylingua.edge.speech.AsrBackend
 import com.polylingua.edge.speech.AssessmentPipeline
 import com.polylingua.edge.speech.CapturedResponse
@@ -26,7 +34,12 @@ import com.polylingua.edge.speech.SpeechSynthesisEngine
 import com.polylingua.edge.ui.DashboardPayload
 import com.polylingua.edge.ui.DiagnosticSessionStore
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
+import java.io.File
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -56,6 +69,9 @@ data class ArenaUiState(
     val topic: String = "",
     val liveIpa: String = "",
     val answered: Int = 0,
+    /** Record the front camera and produce a body-language report (video mock interview / mirror mode). */
+    val videoMode: Boolean = false,
+    val engineSummary: String = "",
 ) {
     val current: ArenaQuestion? get() = questions.getOrNull(index)
 }
@@ -67,6 +83,7 @@ data class ArenaUiState(
  */
 @HiltViewModel
 class ArenaViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context,
     savedState: SavedStateHandle,
     private val repository: CaseRepository,
     private val capture: SpeakingCaptureController,
@@ -94,8 +111,34 @@ class ArenaViewModel @Inject constructor(
     private var stopRequested = false
     private val responses = ArrayList<Pair<ArenaQuestion, CapturedResponse>>()
 
+    /** Front camera for the video interview; owned by the view model so recording survives panel changes. */
+    val video = VideoInterviewRecorder(appContext)
+    val videoStatus: StateFlow<VideoInterviewRecorder.Status> = video.status
+    private var timeline: SessionAudioTimeline? = null
+    private var rawVideo: File? = null
+
     init {
+        _state.value = _state.value.copy(videoMode = settings.settings.value.videoInterview, engineSummary = capture.engineSummary())
         viewModelScope.launch { load() }
+        // Load the recognisers now so the first answer starts instantly.
+        viewModelScope.launch { capture.preload() }
+        viewModelScope.launch {
+            capture.finalizing.collect { f ->
+                if (f != null && _state.value.phase == ArenaPhase.ANALYSING) _state.value = _state.value.copy(progressText = f)
+            }
+        }
+    }
+
+    /** Called by the screen once the camera permission is granted (or the switch is turned off). */
+    fun setVideoMode(on: Boolean) {
+        if (_state.value.phase !in setOf(ArenaPhase.READY, ArenaPhase.LOADING, ArenaPhase.ERROR)) return
+        _state.value = _state.value.copy(videoMode = on)
+        viewModelScope.launch { settings.update { it.copy(videoInterview = on) } }
+        if (on) video.open() else video.close()
+    }
+
+    fun openCamera() {
+        if (_state.value.videoMode) video.open()
     }
 
     private suspend fun load() {
@@ -148,13 +191,22 @@ class ArenaViewModel @Inject constructor(
             _state.value = _state.value.copy(phase = ArenaPhase.COUNTDOWN, countdown = i)
             delay(1000)
         }
+        startVideoIfEnabled()
         val qs = _state.value.questions
         for ((i, q) in qs.withIndex()) {
             _state.value = _state.value.copy(index = i, notes = if (q.part == 2) "" else _state.value.notes)
             if (_state.value.examinerVoice) {
                 _state.value = _state.value.copy(phase = ArenaPhase.EXAMINER)
                 val examiner = tts.resolve(listOf("kokoro:bf_isabella", "kokoro:bf_emma", "piper:alan", "system:en-GB"))
-                tts.speak(q.case.prompt.replace("•", ""), examiner, label = "Examiner")
+                val text = q.case.prompt.replace("•", "")
+                val clip = tts.synthesize(text, examiner)
+                if (clip != null) {
+                    // The examiner's voice also goes into the interview video's soundtrack.
+                    timeline?.add(SystemClock.elapsedRealtimeNanos(), clip)
+                    tts.player.play(clip, "Examiner")
+                } else {
+                    tts.speak(text, examiner, label = "Examiner")
+                }
             }
             if (q.prepSec > 0) {
                 stopRequested = false
@@ -165,6 +217,7 @@ class ArenaViewModel @Inject constructor(
                 }
             }
             val captured = answer(q) ?: return
+            timeline?.add(captured.transcript.startedAtElapsedNs, captured.audio)
             responses += q to captured
             _state.value = _state.value.copy(answered = responses.size)
             if (i < qs.lastIndex) {
@@ -211,11 +264,53 @@ class ArenaViewModel @Inject constructor(
         return captured
     }
 
+    private suspend fun startVideoIfEnabled() {
+        timeline = null
+        rawVideo = null
+        if (!_state.value.videoMode) return
+        if (!video.isReady) {
+            video.open()
+            withTimeoutOrNull(5000) { video.status.first { it.phase == VideoInterviewRecorder.Phase.READY || it.phase == VideoInterviewRecorder.Phase.ERROR } }
+        }
+        val f = File(appContext.cacheDir, "interview_${System.currentTimeMillis()}.mp4")
+        if (video.start(f)) {
+            rawVideo = f
+            timeline = SessionAudioTimeline()
+        } else {
+            UserNotices.post("The front camera is not ready - continuing without video.", UserNotices.Kind.WARNING)
+        }
+    }
+
+    /** Stops the camera, adds the soundtrack and measures body language. */
+    private suspend fun finishVideo(): Pair<File?, BodyLanguageReport?> {
+        if (rawVideo == null) return null to null
+        _state.value = _state.value.copy(phase = ArenaPhase.ANALYSING, progressText = "Saving the interview video…")
+        val recorded = video.stop()
+        video.close()
+        rawVideo = null
+        if (recorded == null) {
+            UserNotices.post("The video could not be saved; your answers are still scored.", UserNotices.Kind.WARNING)
+            return null to null
+        }
+        val origin = video.startedAtElapsedNs
+        val duration = Mp4AudioMuxer.durationSec(recorded)
+        val pcm = timeline?.render(origin, duration) ?: ShortArray(0)
+        _state.value = _state.value.copy(progressText = "Adding examiner and answer audio to the video…")
+        val muxed = File(appContext.cacheDir, "interview_av_${System.currentTimeMillis()}.mp4")
+        val ok = pcm.isNotEmpty() && withContext(Dispatchers.IO) { Mp4AudioMuxer.mux(recorded, pcm, 16000, muxed) }
+        val finalVideo = if (ok) { recorded.delete(); muxed } else recorded
+        val report = BodyLanguageAnalyzer.analyze(finalVideo) { p ->
+            _state.value = _state.value.copy(progressText = "Analysing eye contact and expression… ${(p * 100).toInt()} %")
+        }
+        return finalVideo to report
+    }
+
     fun stopAnswer() { stopRequested = true }
 
     fun skipPrep() { stopRequested = true }
 
     private suspend fun analyse() {
+        val (videoFile, body) = finishVideo()
         _state.value = _state.value.copy(phase = ArenaPhase.ANALYSING, progressText = "Phoneme GOP, prosody and rubric scoring…")
         val st = _state.value
         val combined = if (responses.size == 1) responses.first().second else combine(responses.map { it.second })
@@ -239,11 +334,12 @@ class ArenaViewModel @Inject constructor(
         runCatching {
             val outcome = pipeline.assessSpeaking(combined, context)
             _state.value = _state.value.copy(progressText = "Saving to saved_results/…")
-            val saved = vault.save(context, outcome.assessment, outcome.sample, outcome.transcriptEngine, combined.audio, if (st.mock) null else first.case.id)
+            val saved = vault.save(context, outcome.assessment, outcome.sample, outcome.transcriptEngine, combined.audio, if (st.mock) null else first.case.id, videoFile, body)
             store.current.value = DashboardPayload(
                 context, outcome.assessment, outcome.sample, outcome.transcriptEngine, saved.stem, saved.id,
                 if (combined.audio.isNotEmpty()) PcmUtils.shortsToFloats(combined.audio) else null,
                 if (st.mock) null else first.case.id,
+                saved.video?.absolutePath, body,
             )
         }.onSuccess {
             _state.value = _state.value.copy(phase = ArenaPhase.DONE)
@@ -293,9 +389,12 @@ class ArenaViewModel @Inject constructor(
         active?.abort()
         active = null
         tts.stop()
+        video.discard()
+        rawVideo = null
     }
 
     override fun onCleared() {
         abort()
+        video.close()
     }
 }

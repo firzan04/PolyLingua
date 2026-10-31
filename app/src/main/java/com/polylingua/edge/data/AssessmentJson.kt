@@ -1,5 +1,6 @@
 package com.polylingua.edge.data
 
+import com.polylingua.edge.domain.model.BodyLanguageReport
 import com.polylingua.edge.domain.model.CefrLevel
 import com.polylingua.edge.domain.model.CriterionScore
 import com.polylingua.edge.domain.model.DetectedStructure
@@ -37,6 +38,9 @@ data class StoredSession(
     val sample: SpeechSample,
     val transcriptEngine: String,
     val wavFile: String,
+    /** "IELTS_Speaking_Tech_test N.mp4" when the session was recorded on video ("" otherwise). */
+    val videoFile: String = "",
+    val bodyLanguage: BodyLanguageReport? = null,
 )
 
 /** Lossless-enough JSON codec for assessments (schema "polylingua.speaking.v1"). */
@@ -61,6 +65,8 @@ object AssessmentJson {
         engine: String,
         wavFile: String,
         csvFile: String,
+        videoFile: String = "",
+        body: BodyLanguageReport? = null,
     ): JSONObject {
         val o = JSONObject()
         o.put("schema", SCHEMA)
@@ -156,8 +162,46 @@ object AssessmentJson {
         })
         o.put("modelAnswers", JSONObject().put("naturalPolish", a.naturalPolish).put("band9", a.band9Version))
         o.put("warnings", strings(a.warnings))
-        o.put("files", JSONObject().put("wav", wavFile).put("csv", csvFile))
+        o.put("files", JSONObject().put("wav", wavFile).put("csv", csvFile).apply { if (videoFile.isNotBlank()) put("video", videoFile) })
+        body?.let { o.put("bodyLanguage", bodyToJson(it)) }
         return o
+    }
+
+    fun bodyToJson(b: BodyLanguageReport): JSONObject = JSONObject()
+        .put("framesAnalysed", b.framesAnalysed)
+        .put("durationSec", r3(b.durationSec))
+        .put("facePresentPct", b.facePresentPct)
+        .put("eyeContactPct", b.eyeContactPct)
+        .put("smilePct", b.smilePct)
+        .put("eyesClosedPct", b.eyesClosedPct)
+        .put("headYawStdDeg", b.headYawStdDeg)
+        .put("headPitchStdDeg", b.headPitchStdDeg)
+        .put("lookAwayEvents", b.lookAwayEvents)
+        .put("framing", b.framing)
+        .put("presenceScore", b.presenceScore)
+        .put("eyeContactTimeline", JSONArray().apply { b.eyeContactTimeline.forEach { put(it) } })
+        .put("strengths", strings(b.strengths))
+        .put("tips", strings(b.tips))
+
+    fun bodyFromJson(o: JSONObject?): BodyLanguageReport? {
+        if (o == null || !o.has("presenceScore")) return null
+        val tl = o.optJSONArray("eyeContactTimeline")
+        return BodyLanguageReport(
+            framesAnalysed = o.optInt("framesAnalysed"),
+            durationSec = o.optDouble("durationSec", 0.0),
+            facePresentPct = o.optDouble("facePresentPct", 0.0),
+            eyeContactPct = o.optDouble("eyeContactPct", 0.0),
+            smilePct = o.optDouble("smilePct", 0.0),
+            eyesClosedPct = o.optDouble("eyesClosedPct", 0.0),
+            headYawStdDeg = o.optDouble("headYawStdDeg", 0.0),
+            headPitchStdDeg = o.optDouble("headPitchStdDeg", 0.0),
+            lookAwayEvents = o.optInt("lookAwayEvents"),
+            framing = o.optString("framing"),
+            presenceScore = o.optDouble("presenceScore", 0.0),
+            eyeContactTimeline = if (tl == null) emptyList() else (0 until tl.length()).map { tl.optDouble(it, -1.0) },
+            strengths = o.optJSONArray("strengths").strings(),
+            tips = o.optJSONArray("tips").strings(),
+        )
     }
 
     private fun criterion(c: CriterionScore) = JSONObject()
@@ -279,6 +323,8 @@ object AssessmentJson {
             sample = sample,
             transcriptEngine = tr.optString("engine"),
             wavFile = o.optJSONObject("files")?.optString("wav").orEmpty(),
+            videoFile = o.optJSONObject("files")?.optString("video").orEmpty(),
+            bodyLanguage = bodyFromJson(o.optJSONObject("bodyLanguage")),
         )
     }
 

@@ -13,6 +13,7 @@
 
 #include <cstring>
 #include <sstream>
+#include <exception>
 #include <string>
 #include <vector>
 
@@ -88,7 +89,16 @@ Java_com_polylingua_edge_nativebridge_SherpaNative_nativeCreateOnlineRecognizer(
     config.rule2_min_trailing_silence = rule2;
     config.rule3_min_utterance_length = rule3;
 
-    const SherpaOnnxOnlineRecognizer* rec = SherpaOnnxCreateOnlineRecognizer(&config);
+    const SherpaOnnxOnlineRecognizer* rec = nullptr;
+    try {
+        rec = SherpaOnnxCreateOnlineRecognizer(&config);
+    } catch (const std::exception& e) {
+        PL_LOGE("SherpaOnnxCreateOnlineRecognizer threw: %s", e.what());
+        rec = nullptr;
+    } catch (...) {
+        PL_LOGE("SherpaOnnxCreateOnlineRecognizer threw an unknown exception");
+        rec = nullptr;
+    }
     if (rec == nullptr) PL_LOGE("SherpaOnnxCreateOnlineRecognizer failed (encoder=%s)", encoder.c_str());
     return ToHandle(rec);
 }
@@ -294,7 +304,16 @@ Java_com_polylingua_edge_nativebridge_SherpaNative_nativeCreateOfflineRecognizer
         PL_LOGE("Unknown offline recognizer kind: %s", kind.c_str());
         return 0;
     }
-    const SherpaOnnxOfflineRecognizer* rec = SherpaOnnxCreateOfflineRecognizer(&config);
+    const SherpaOnnxOfflineRecognizer* rec = nullptr;
+    try {
+        rec = SherpaOnnxCreateOfflineRecognizer(&config);
+    } catch (const std::exception& e) {
+        PL_LOGE("SherpaOnnxCreateOfflineRecognizer threw: %s", e.what());
+        rec = nullptr;
+    } catch (...) {
+        PL_LOGE("SherpaOnnxCreateOfflineRecognizer threw an unknown exception");
+        rec = nullptr;
+    }
     if (rec == nullptr) PL_LOGE("SherpaOnnxCreateOfflineRecognizer failed (%s)", kind.c_str());
     return ToHandle(rec);
 }
@@ -378,7 +397,16 @@ Java_com_polylingua_edge_nativebridge_SherpaNative_nativeCreateTts(
         PL_LOGE("Unknown TTS kind: %s", kind.c_str());
         return 0;
     }
-    const SherpaOnnxOfflineTts* tts = SherpaOnnxCreateOfflineTts(&config);
+    const SherpaOnnxOfflineTts* tts = nullptr;
+    try {
+        tts = SherpaOnnxCreateOfflineTts(&config);
+    } catch (const std::exception& e) {
+        PL_LOGE("SherpaOnnxCreateOfflineTts threw: %s", e.what());
+        tts = nullptr;
+    } catch (...) {
+        PL_LOGE("SherpaOnnxCreateOfflineTts threw an unknown exception");
+        tts = nullptr;
+    }
     if (tts == nullptr) PL_LOGE("SherpaOnnxCreateOfflineTts failed (%s, %s)", kind.c_str(), model.c_str());
     return ToHandle(tts);
 }

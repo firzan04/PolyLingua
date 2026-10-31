@@ -43,6 +43,8 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
 
+private const val TAG = "PolyLinguaAsr"
+
 /** Rolling recogniser output for live captions. Times are seconds from session start. */
 data class LiveTranscript(
     val committed: String = "",

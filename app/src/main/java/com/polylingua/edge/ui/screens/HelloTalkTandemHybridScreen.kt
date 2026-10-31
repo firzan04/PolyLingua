@@ -418,6 +418,7 @@ private fun PersonaChatView(vm: TandemViewModel) {
     val recording by vm.recording.collectAsStateWithLifecycle()
     val live by vm.live.collectAsStateWithLifecycle()
     val speak by vm.speakReplies.collectAsStateWithLifecycle()
+    val handsFree by vm.handsFree.collectAsStateWithLifecycle()
     val motion by vm.motion.collectAsStateWithLifecycle()
     val error by vm.error.collectAsStateWithLifecycle()
     var input by remember { mutableStateOf("") }
@@ -443,6 +444,17 @@ private fun PersonaChatView(vm: TandemViewModel) {
             }, size = 36.dp, color = if (selfView) PolyColors.NeonMintSuccess else PolyColors.PureIceWhite)
             Spacer(Modifier.width(6.dp))
             IconCircleButton(PolyIcons.Trash, vm::clearThread, size = 36.dp)
+        }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Live talk (hands-free)", style = PolyType.Body.copy(fontSize = 13.sp))
+                Text(
+                    if (handsFree) "Just talk - a ${"%.1f".format(vm.turnEndSec)} s pause sends your turn; the mic reopens after each reply"
+                    else "Like Gemini Live: no tapping, natural turn-taking",
+                    style = PolyType.Caption,
+                )
+            }
+            Switch(handsFree, vm::setHandsFree, colors = SwitchDefaults.colors(checkedTrackColor = PolyColors.CrimsonAlert))
         }
         if (selfView) {
             Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).height(160.dp).clip(RoundedCornerShape(16.dp)).border(1.dp, PolyColors.FrostedBorder, RoundedCornerShape(16.dp))) {

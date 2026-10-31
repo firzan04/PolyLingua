@@ -3,6 +3,19 @@ package com.polylingua.edge.ui.screens
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.FileProvider
+import androidx.media3.common.MediaItem
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
+import com.polylingua.edge.core.UserNotices
+import com.polylingua.edge.domain.model.BodyLanguageReport
+import java.io.File
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -138,8 +151,98 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
+    /** Copies the interview video to the phone's gallery (Movies/PolyLingua). */
+    fun exportVideo() {
+        val stem = payload.value?.stem ?: return
+        viewModelScope.launch {
+            runCatching { vault.exportVideoToGallery(stem) }
+                .onSuccess { UserNotices.post("Saved to $it", UserNotices.Kind.SUCCESS) }
+                .onFailure { UserNotices.post("Could not save the video: ${it.message}", UserNotices.Kind.ERROR) }
+        }
+    }
+
+    fun shareVideo(context: Context) {
+        val path = payload.value?.videoPath ?: return
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", File(path))
+        val send = Intent(Intent.ACTION_SEND).setType("video/mp4").putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        runCatching { context.startActivity(Intent.createChooser(send, "Share interview video").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+    }
+
     override fun onCleared() {
         tts.stop()
+    }
+}
+
+/** Plays the recorded interview and shows the body-language report. */
+@Composable
+private fun VideoReviewCard(path: String, body: BodyLanguageReport?, onExport: () -> Unit, onShare: () -> Unit) {
+    val context = LocalContext.current
+    val player = remember(path) {
+        ExoPlayer.Builder(context).build().apply {
+            setMediaItem(MediaItem.fromUri(Uri.fromFile(File(path))))
+            prepare()
+        }
+    }
+    DisposableEffect(player) { onDispose { player.release() } }
+    FrostedCard(accent = PolyColors.CrimsonAlert) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Video interview", style = PolyType.CardTitle)
+                Text("Front camera · examiner questions + your answers", style = PolyType.Caption)
+            }
+            body?.let { ScoreRing(it.presenceScore, "presence") }
+        }
+        Spacer(Modifier.height(8.dp))
+        AndroidView(
+            factory = { ctx -> PlayerView(ctx).apply { this.player = player; useController = true; setShutterBackgroundColor(android.graphics.Color.BLACK) } },
+            modifier = Modifier.fillMaxWidth().height(380.dp).clip(RoundedCornerShape(12.dp)),
+        )
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            GhostButton("Save to gallery", onExport, Modifier.weight(1f), icon = PolyIcons.Download)
+            GhostButton("Share", onShare, Modifier.weight(1f), icon = PolyIcons.Share)
+        }
+        if (body == null) {
+            Spacer(Modifier.height(8.dp))
+            Text("Body-language analysis was not available for this video.", style = PolyType.Caption)
+            return@FrostedCard
+        }
+        Spacer(Modifier.height(10.dp))
+        Text("Body language (not scored by IELTS - but it shapes how confident you sound and look)", style = PolyType.Caption)
+        Spacer(Modifier.height(6.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            StatTile("Eye contact", "${body.eyeContactPct.toInt()}%", Modifier.weight(1f), color = PolyColors.forScore(body.eyeContactPct), hint = "aim ≥ 65%")
+            StatTile("Smiling", "${body.smilePct.toInt()}%", Modifier.weight(1f), color = if (body.smilePct >= 12) PolyColors.NeonMintSuccess else PolyColors.AmberWarning)
+            StatTile("Head ±", "${body.headYawStdDeg.toInt()}°", Modifier.weight(1f), color = if (body.headYawStdDeg + body.headPitchStdDeg <= 14) PolyColors.NeonMintSuccess else PolyColors.AmberWarning)
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            StatTile("In frame", "${body.facePresentPct.toInt()}%", Modifier.weight(1f))
+            StatTile("Look-aways", "${body.lookAwayEvents}", Modifier.weight(1f))
+            StatTile("Framing", body.framing.substringBefore(" the"), Modifier.weight(1f))
+        }
+        if (body.eyeContactTimeline.size > 1) {
+            Spacer(Modifier.height(10.dp))
+            Text("Eye contact over time (5-second steps)", style = PolyType.Caption)
+            Spacer(Modifier.height(4.dp))
+            Row(Modifier.fillMaxWidth().height(44.dp), horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.Bottom) {
+                body.eyeContactTimeline.forEach { v ->
+                    val frac = if (v < 0) 0.06f else v.toFloat().coerceIn(0.06f, 1f)
+                    Box(
+                        Modifier.weight(1f).fillMaxHeight(frac).clip(RoundedCornerShape(3.dp))
+                            .background(if (v < 0) PolyColors.FrostedBorder else PolyColors.forScore(v * 100)),
+                    )
+                }
+            }
+        }
+        if (body.strengths.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            BulletList(body.strengths, color = PolyColors.NeonMintSuccess)
+        }
+        if (body.tips.isNotEmpty()) {
+            Spacer(Modifier.height(6.dp))
+            BulletList(body.tips, color = PolyColors.AmberWarning)
+        }
     }
 }
 
@@ -304,6 +407,10 @@ fun BentoDiagnosticDashboardScreen(nav: NavHostController, vm: DashboardViewMode
                         PhonemeHeatmap(words.sortedBy { it.score }.take(24), onPhoneme = { w, ph -> remediation = w to ph })
                     }
                 }
+            }
+            // ---------------------------------------------------------- video interview
+            p.videoPath?.let { path ->
+                item { VideoReviewCard(path, p.bodyLanguage, onExport = vm::exportVideo, onShare = { vm.shareVideo(context) }) }
             }
             // ---------------------------------------------------------- transcript
             item {

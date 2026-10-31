@@ -74,7 +74,16 @@ class HomeViewModel @Inject constructor(
     private val asr: SpeechRecognitionEngine,
     private val store: DiagnosticSessionStore,
     val settings: AppSettings,
+    private val tts: SpeechSynthesisEngine,
 ) : ViewModel() {
+
+    init {
+        // Warm the default neural voice so the examiner's first question plays without a pause.
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(2500)
+            runCatching { tts.prewarm() }
+        }
+    }
 
     val packages: StateFlow<List<PackageEntity>> = repository.packages.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val caseCount: StateFlow<Int> = repository.caseCount.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
@@ -180,7 +189,8 @@ class HomeViewModel @Inject constructor(
 
     private suspend fun publish(stored: StoredSession, id: Long?, caseId: Long?) {
         val audio = withContext(CoreExecutors.dsp) { vault.loadAudio(stored) }
-        store.current.value = DashboardPayload(stored.context, stored.assessment, stored.sample, stored.transcriptEngine, stored.stem, id, audio, caseId)
+        val video = stored.videoFile.takeIf { it.isNotBlank() }?.let { File(vault.dir, it) }?.takeIf { it.isFile }?.absolutePath
+        store.current.value = DashboardPayload(stored.context, stored.assessment, stored.sample, stored.transcriptEngine, stored.stem, id, audio, caseId, video, stored.bodyLanguage)
     }
 
     fun deleteSession(e: SessionResultEntity) {

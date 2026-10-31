@@ -175,6 +175,81 @@ object PcmUtils {
         fun durationSec(sampleRate: Int): Double = size.toDouble() / sampleRate
     }
 
+    /**
+     * Loudness envelope of the spoken part of a clip for waveform overlays: leading/trailing
+     * silence trimmed, then [bars] RMS bins normalised to 0..1 (so a learner's take and the
+     * native recording line up even if one started later).
+     */
+    fun speechEnvelope(samples: FloatArray, sampleRate: Int, bars: Int = 120): FloatArray {
+        if (samples.isEmpty() || bars <= 0) return FloatArray(0)
+        val hop = max(1, sampleRate / 100)
+        val frames = samples.size / hop
+        if (frames < 2) return FloatArray(bars)
+        val frameRms = FloatArray(frames) { f ->
+            var acc = 0.0
+            for (i in f * hop until min(samples.size, (f + 1) * hop)) acc += samples[i].toDouble() * samples[i]
+            sqrt(acc / hop).toFloat()
+        }
+        val peak = frameRms.maxOrNull() ?: 0f
+        val threshold = max(peak * 0.08f, 0.004f)
+        val first = frameRms.indexOfFirst { it >= threshold }.takeIf { it >= 0 } ?: 0
+        val last = frameRms.indexOfLast { it >= threshold }.takeIf { it >= first } ?: (frames - 1)
+        val span = last - first + 1
+        val out = FloatArray(bars) { b ->
+            val a = first + (b.toLong() * span / bars).toInt()
+            val e = max(a + 1, first + ((b + 1).toLong() * span / bars).toInt())
+            var m = 0f
+            for (f in a until min(e, frames)) m = max(m, frameRms[f])
+            m
+        }
+        val top = out.maxOrNull()?.takeIf { it > 0f } ?: return out
+        for (i in out.indices) out[i] = out[i] / top
+        return out
+    }
+
+    /**
+     * Drift-free streaming downsampler (box filter between exact output boundaries) for decoding
+     * long media to 16 kHz chunk by chunk; also handles upsampling by sample-and-hold.
+     */
+    class StreamingResampler(inRate: Int, private val outRate: Int) {
+        private var ratio = inRate.toDouble() / outRate
+        private var acc = 0.0
+        private var cnt = 0
+        private var idx = 0L
+        private var next = ratio
+
+        fun setInputRate(inRate: Int) {
+            val r = inRate.toDouble() / outRate
+            if (r != ratio) { ratio = r; next = idx + r }
+        }
+
+        inline fun push(x: Float, emit: (Float) -> Unit) {
+            pushInternal(x)?.let { first ->
+                emit(first)
+                while (pending > 0) { pending--; emit(holdValue) }
+            }
+        }
+
+        @PublishedApi internal var pending = 0
+        @PublishedApi internal var holdValue = 0f
+
+        @PublishedApi internal fun pushInternal(x: Float): Float? {
+            acc += x
+            cnt++
+            idx++
+            if (idx < next) return null
+            val v = (acc / cnt).toFloat()
+            acc = 0.0
+            cnt = 0
+            next += ratio
+            var extra = 0
+            while (idx >= next) { extra++; next += ratio }
+            pending = extra
+            holdValue = x
+            return v
+        }
+    }
+
     fun toByteArrayWav(samples: ShortArray, sampleRate: Int): ByteArray {
         val bos = ByteArrayOutputStream(samples.size * 2 + 44)
         writeWav(bos, samples, sampleRate)
