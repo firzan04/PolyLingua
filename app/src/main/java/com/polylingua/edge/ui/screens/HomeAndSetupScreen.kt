@@ -185,9 +185,15 @@ private fun ReadinessCard(nav: NavHostController, vm: HomeViewModel) {
             Spacer(Modifier.height(10.dp))
             Banner(com.polylingua.edge.nativebridge.NativeLoader.loadError ?: "On-device AI runtime unavailable", PolyColors.CrimsonAlert)
         }
+        if (vm.asrBackend == AsrBackend.SHERPA_OFFLINE && ready < total) {
+            Spacer(Modifier.height(10.dp))
+            Text("New: NeMo FastConformer live captions and NVIDIA Parakeet final transcripts are far more accurate than the old 20 M model. Tap Get all in Models & settings.", style = PolyType.Caption.copy(color = PolyColors.AmberWarning))
+            Spacer(Modifier.height(6.dp))
+            GhostButton("Upgrade speech models", { nav.navigate(Routes.SETUP) }, icon = PolyIcons.Download, color = PolyColors.AmberWarning)
+        }
         if (vm.asrBackend != AsrBackend.SHERPA_OFFLINE) {
             Spacer(Modifier.height(10.dp))
-            Text("Download the essential bundle (~435 MB, once) for fully offline captions, GOP phoneme scoring and neural voices.", style = PolyType.Caption)
+            Text("Download the essential bundle (~${ModelCatalog.ESSENTIALS_MB} MB, once) for accurate offline captions, GOP phoneme scoring and neural voices.", style = PolyType.Caption)
             Spacer(Modifier.height(8.dp))
             PrimaryButton("Open model manager", { nav.navigate(Routes.SETUP) }, icon = PolyIcons.Download)
         }
@@ -437,12 +443,12 @@ fun ModelSetupScreen(onBack: () -> Unit, vm: SetupViewModel = hiltViewModel()) {
     val statuses by vm.statuses.collectAsStateWithLifecycle()
     val settings by vm.userSettings.collectAsStateWithLifecycle()
     val roots by vm.roots.collectAsStateWithLifecycle()
-    val voices by vm.voices.collectAsStateWithLifecycle()
-    val llmState by vm.llmState.collectAsStateWithLifecycle()
+    val busy by vm.busy.collectAsStateWithLifecycle()
     val installedCount = statuses.values.count { it is PackStatus.Installed }
     LaunchedEffect(installedCount) { vm.refresh(rescan = false) }
     Column(Modifier.fillMaxSize()) {
-        ScreenHeader("Models & settings", "Offline packs · storage · voices · coach", onBack)
+        ScreenHeader("Models & settings", "Offline packs · recognition · voices · AI coach", onBack)
+        busy?.let { Banner(it, PolyColors.ElectricTeal, Modifier.padding(horizontal = 16.dp), icon = PolyIcons.Info) }
         LazyColumn(contentPadding = ScreenPadding, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
                 FrostedCard {
@@ -476,7 +482,7 @@ fun ModelSetupScreen(onBack: () -> Unit, vm: SetupViewModel = hiltViewModel()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text("Essential offline bundle", style = PolyType.CardTitle)
-                            Text("VAD · Zipformer ASR · punctuation · GOP · Kokoro voices (~435 MB)", style = PolyType.Caption)
+                            Text("VAD · NeMo live captions · punctuation · Parakeet final transcript · GOP · Kokoro voices (~${ModelCatalog.ESSENTIALS_MB} MB)", style = PolyType.Caption)
                         }
                         PrimaryButton("Get all", vm::downloadEssentials, icon = PolyIcons.Download)
                     }
@@ -487,8 +493,11 @@ fun ModelSetupScreen(onBack: () -> Unit, vm: SetupViewModel = hiltViewModel()) {
                             colors = SwitchDefaults.colors(checkedTrackColor = PolyColors.ElectricTeal))
                     }
                     if (vm.metered() && !settings.cellularDownloadsAllowed) Text("You are on a metered connection: packs over 50 MB wait for Wi-Fi.", style = PolyType.Caption.copy(color = PolyColors.AmberWarning))
+                    Text("You get a notification when each pack finishes installing.", style = PolyType.Caption)
                 }
             }
+            item { SectionHeader("Speech recognition", vm.asrSummary()) }
+            item { RecognitionCard(vm, settings, statuses) }
             ModelKind.entries.forEach { kind ->
                 val packs = ModelCatalog.ALL.filter { it.kind == kind }
                 if (packs.isEmpty()) return@forEach
@@ -501,13 +510,19 @@ fun ModelSetupScreen(onBack: () -> Unit, vm: SetupViewModel = hiltViewModel()) {
                                 Column(Modifier.weight(1f)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(pack.title, style = PolyType.CardTitle, modifier = Modifier.weight(1f, fill = false))
-                                        if (pack.recommended) { Spacer(Modifier.width(6.dp)); PillBadge("ESSENTIAL", PolyColors.AmberWarning) }
+                                        if (pack in ModelCatalog.ESSENTIALS) { Spacer(Modifier.width(6.dp)); PillBadge("ESSENTIAL", PolyColors.AmberWarning) }
                                     }
                                     Text("${pack.sizeMb} MB · ${pack.license}", style = PolyType.Caption)
                                 }
                             }
                             Spacer(Modifier.height(4.dp))
                             Text(pack.description, style = PolyType.Caption.copy(color = PolyColors.PureIceWhite))
+                            if (pack.id in vm.blockedModels()) {
+                                Spacer(Modifier.height(6.dp))
+                                Banner("This model crashed while loading on this phone and is disabled.", PolyColors.CrimsonAlert) {
+                                    GhostButton("Re-enable", { vm.unblock(pack.id) }, color = PolyColors.CrimsonAlert)
+                                }
+                            }
                             Spacer(Modifier.height(10.dp))
                             when (st) {
                                 is PackStatus.Installed -> Row(verticalAlignment = Alignment.CenterVertically) {
@@ -519,7 +534,11 @@ fun ModelSetupScreen(onBack: () -> Unit, vm: SetupViewModel = hiltViewModel()) {
                                     Spacer(Modifier.height(6.dp))
                                     GhostButton("Cancel", { vm.cancel(pack) }, color = PolyColors.MutedSlateText)
                                 }
-                                is PackStatus.Queued -> Text("Queued…", style = PolyType.Caption)
+                                PackStatus.Finishing -> Text("Verifying and installing…", style = PolyType.Caption.copy(color = PolyColors.ElectricTeal))
+                                is PackStatus.Queued -> Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("Queued…", style = PolyType.Caption, modifier = Modifier.weight(1f))
+                                    GhostButton("Cancel", { vm.cancel(pack) }, color = PolyColors.MutedSlateText)
+                                }
                                 is PackStatus.Failed -> Column {
                                     Text(st.message, style = PolyType.Caption.copy(color = PolyColors.CrimsonAlert))
                                     Spacer(Modifier.height(6.dp))
@@ -531,31 +550,8 @@ fun ModelSetupScreen(onBack: () -> Unit, vm: SetupViewModel = hiltViewModel()) {
                     }
                 }
             }
-            item { SectionHeader("Voice & accent") }
-            item {
-                FrostedCard {
-                    Text("Model-answer accent", style = PolyType.Caption)
-                    Spacer(Modifier.height(6.dp))
-                    ChoiceChips(AccentPreference.entries.map { it.label }, setOf(settings.accent.ordinal), { vm.setAccent(AccentPreference.entries[it]) })
-                    Spacer(Modifier.height(12.dp))
-                    Text("Voice (tap to preview & select)", style = PolyType.Caption)
-                    Spacer(Modifier.height(6.dp))
-                    voices.forEach { v ->
-                        val active = settings.ttsVoiceId == v.id
-                        Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
-                                .background(if (active) PolyColors.ElectricTeal.copy(alpha = 0.15f) else androidx.compose.ui.graphics.Color.Transparent)
-                                .clickable { vm.update { it.copy(ttsVoiceId = v.id) }; vm.previewVoice(v) }.padding(8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(PolyIcons.Speaker, null, tint = if (v.isNeural) PolyColors.NeonMintSuccess else PolyColors.MutedSlateText, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(v.label, style = PolyType.Body.copy(fontSize = 13.sp), modifier = Modifier.weight(1f))
-                            PillBadge(if (v.isNeural) "NEURAL ${v.accent}" else "SYSTEM ${v.accent}", if (v.isNeural) PolyColors.NeonMintSuccess else PolyColors.MutedSlateText)
-                        }
-                    }
-                }
-            }
+            item { SectionHeader("Voice & accent", "Tap a voice to select and hear it") }
+            item { VoicesCard(vm, settings) }
             item { SectionHeader("Audio") }
             item {
                 FrostedCard {
@@ -571,33 +567,8 @@ fun ModelSetupScreen(onBack: () -> Unit, vm: SetupViewModel = hiltViewModel()) {
                         colors = SliderDefaults.colors(thumbColor = PolyColors.ElectricTeal, activeTrackColor = PolyColors.ElectricTeal))
                 }
             }
-            item { SectionHeader("Offline AI coach") }
-            item {
-                FrostedCard {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text("Use on-device LLM", style = PolyType.Body)
-                            Text(
-                                when (val s = llmState) {
-                                    is LlmState.Ready -> "Loaded: ${s.pack}"
-                                    is LlmState.Loading -> "Loading ${s.pack}…"
-                                    is LlmState.Error -> s.message
-                                    LlmState.NotInstalled -> "No GGUF model installed"
-                                    LlmState.Unloaded -> "Loads on first use (2 threads on Cortex-A76)"
-                                },
-                                style = PolyType.Caption,
-                            )
-                        }
-                        Switch(settings.useLlmCoach, { on -> vm.update { it.copy(useLlmCoach = on) } }, colors = SwitchDefaults.colors(checkedTrackColor = PolyColors.ElectricTeal))
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    val llmPacks = listOf(ModelCatalog.LLM_QWEN, ModelCatalog.LLM_SMOL)
-                    ChoiceChips(llmPacks.map { it.title }, setOf(llmPacks.indexOfFirst { it.id == settings.llmPackId }.coerceAtLeast(0)),
-                        { i -> vm.update { it.copy(llmPackId = llmPacks[i].id) } })
-                    Spacer(Modifier.height(8.dp))
-                    GhostButton("Load now", vm::loadLlm, icon = PolyIcons.Bolt)
-                }
-            }
+            item { SectionHeader("AI coach", "Persona chat · corrections · examiner comments") }
+            item { AiCoachCard(vm, settings) }
             item { SectionHeader("Profile & network") }
             item {
                 FrostedCard {
@@ -625,6 +596,235 @@ fun ModelSetupScreen(onBack: () -> Unit, vm: SetupViewModel = hiltViewModel()) {
                     Text("CPU: ${CoreExecutors.topology.summary} · inference threads ${CoreExecutors.inferenceThreads}", style = PolyType.Caption)
                 }
             }
+            item { SectionHeader("Diagnostics", "Send this log if something does not work") }
+            item { DiagnosticsCard(vm) }
+        }
+    }
+}
+
+@Composable
+private fun RecognitionCard(vm: SetupViewModel, settings: com.polylingua.edge.core.UserSettings, statuses: Map<String, PackStatus>) {
+    FrostedCard {
+        val live = ModelCatalog.STREAMING_ASR.filter { statuses[it.id] is PackStatus.Installed }
+        Text("Live captions", style = PolyType.Body)
+        Text("What you see while speaking (also word timing for fluency).", style = PolyType.Caption)
+        Spacer(Modifier.height(6.dp))
+        val liveOptions = listOf("" to "Auto (most accurate)") + live.map { it.id to it.title.substringBefore(" (") }
+        ChoiceChips(liveOptions.map { it.second }, setOf(liveOptions.indexOfFirst { it.first == settings.liveAsrPackId }.coerceAtLeast(0)),
+            { i -> vm.update { it.copy(liveAsrPackId = liveOptions[i].first) } })
+        if (live.isEmpty()) Text("No live recogniser installed yet - download NeMo FastConformer below.", style = PolyType.Caption.copy(color = PolyColors.AmberWarning))
+        Spacer(Modifier.height(12.dp))
+        Text("Final transcript (used for scoring)", style = PolyType.Body)
+        Text("Re-reads each whole answer after you stop - much more accurate than live captions.", style = PolyType.Caption)
+        Spacer(Modifier.height(6.dp))
+        val finals = ModelCatalog.SECOND_PASS_ASR.filter { statuses[it.id] is PackStatus.Installed }
+        val finalOptions = listOf("" to "Auto") + finals.map { it.id to it.title.substringBefore(" (") } +
+            listOf(com.polylingua.edge.core.UserSettings.FINAL_ASR_GEMINI to "Gemini (cloud)", com.polylingua.edge.core.UserSettings.FINAL_ASR_OFF to "Off")
+        ChoiceChips(finalOptions.map { it.second }, setOf(finalOptions.indexOfFirst { it.first == settings.finalAsrPackId }.coerceAtLeast(0)),
+            { i -> vm.update { it.copy(finalAsrPackId = finalOptions[i].first) } })
+        if (settings.finalAsrPackId == com.polylingua.edge.core.UserSettings.FINAL_ASR_GEMINI && !vm.hasKey(com.polylingua.edge.core.SecureKeyStore.Slot.GEMINI)) {
+            Text("Add a Gemini API key in AI coach below. Offline Parakeet is used when there is no internet.", style = PolyType.Caption.copy(color = PolyColors.AmberWarning))
+        }
+        Spacer(Modifier.height(12.dp))
+        Text("End of turn in hands-free conversations: ${"%.1f".format(settings.turnEndSilenceSec)} s of silence", style = PolyType.Caption)
+        Slider(settings.turnEndSilenceSec, { v -> vm.update { it.copy(turnEndSilenceSec = (v * 10).toInt() / 10f) } }, valueRange = 0.8f..3.5f,
+            colors = SliderDefaults.colors(thumbColor = PolyColors.ElectricTeal, activeTrackColor = PolyColors.ElectricTeal))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Microphone auto-gain", style = PolyType.Body)
+                Text("Evens out quiet/loud speech and removes rumble before recognition", style = PolyType.Caption)
+            }
+            Switch(settings.micAutoGain, { on -> vm.update { it.copy(micAutoGain = on) } }, colors = SwitchDefaults.colors(checkedTrackColor = PolyColors.ElectricTeal))
+        }
+    }
+}
+
+@Composable
+private fun VoicesCard(vm: SetupViewModel, settings: com.polylingua.edge.core.UserSettings) {
+    val voices by vm.voices.collectAsStateWithLifecycle()
+    val missing by vm.missingVoices.collectAsStateWithLifecycle()
+    val health by vm.voiceHealth.collectAsStateWithLifecycle()
+    val sys by vm.systemTts.collectAsStateWithLifecycle()
+    FrostedCard {
+        Text("Model-answer accent", style = PolyType.Caption)
+        Spacer(Modifier.height(6.dp))
+        ChoiceChips(AccentPreference.entries.map { it.label }, setOf(settings.accent.ordinal), { vm.setAccent(AccentPreference.entries[it]) })
+        Spacer(Modifier.height(10.dp))
+        Text(
+            if (sys.ready) "Android engine: ${sys.engineLabel.ifBlank { "unknown" }} · ${sys.voiceCount} offline voices"
+            else sys.error ?: "Android engine: checking…",
+            style = PolyType.Caption.copy(color = if (sys.ready) PolyColors.MutedSlateText else PolyColors.AmberWarning),
+        )
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            GhostButton("Test all voices", vm::testAllVoices, Modifier.weight(1f), icon = PolyIcons.Speaker)
+            GhostButton("Android TTS settings", vm::openTtsSettings, Modifier.weight(1f), icon = PolyIcons.Sliders, color = PolyColors.MutedSlateText)
+        }
+        Spacer(Modifier.height(10.dp))
+        voices.forEach { v ->
+            val active = settings.ttsVoiceId == v.id
+            val h = health[v.id]
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+                    .background(if (active) PolyColors.ElectricTeal.copy(alpha = 0.15f) else Color.Transparent)
+                    .clickable { vm.update { it.copy(ttsVoiceId = v.id) }; vm.previewVoice(v) }.padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(PolyIcons.Speaker, null, tint = if (v.isNeural) PolyColors.NeonMintSuccess else PolyColors.MutedSlateText, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(v.label, style = PolyType.Body.copy(fontSize = 13.sp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    when (h) {
+                        is com.polylingua.edge.speech.VoiceHealth.Ok -> Text("✓ works${if (h.millis > 0) " · ${h.millis} ms" else ""}", style = PolyType.Caption.copy(color = PolyColors.NeonMintSuccess, fontSize = 11.sp))
+                        is com.polylingua.edge.speech.VoiceHealth.Failed -> Text("✗ ${h.reason}", style = PolyType.Caption.copy(color = PolyColors.CrimsonAlert, fontSize = 11.sp), maxLines = 2)
+                        null -> {}
+                    }
+                }
+                PillBadge(if (v.isNeural) "NEURAL ${v.accent}" else "SYSTEM ${v.accent}", if (v.isNeural) PolyColors.NeonMintSuccess else PolyColors.MutedSlateText)
+            }
+        }
+        if (missing.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            Text("Not installed on this phone: ${missing.joinToString { it.accent }}", style = PolyType.Caption.copy(color = PolyColors.AmberWarning))
+            Text("Install the voice data (free) to use these accents for personas like Chloe (AU) or Budi (ID).", style = PolyType.Caption)
+            Spacer(Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                GhostButton("Install voice data", vm::installVoiceData, Modifier.weight(1f), icon = PolyIcons.Download, color = PolyColors.AmberWarning)
+                GhostButton("Google TTS", vm::getGoogleTts, Modifier.weight(1f), icon = PolyIcons.Globe, color = PolyColors.MutedSlateText)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AiCoachCard(vm: SetupViewModel, settings: com.polylingua.edge.core.UserSettings) {
+    val health by vm.aiHealth.collectAsStateWithLifecycle()
+    val llmState by vm.llmState.collectAsStateWithLifecycle()
+    val revision by vm.keyRevision.collectAsStateWithLifecycle()
+    val kinds = com.polylingua.edge.core.AiProviderKind.entries
+    FrostedCard {
+        Text("Provider", style = PolyType.Body)
+        Spacer(Modifier.height(6.dp))
+        ChoiceChips(kinds.map { it.label.substringBefore(" (") }, setOf(settings.aiProvider.ordinal), { vm.setProvider(kinds[it]) })
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "Cloud providers need their own API key - a Claude Pro or Google AI Pro chat subscription does not include API access. " +
+                "Keys are encrypted with the Android Keystore and never leave this phone except to call that provider.",
+            style = PolyType.Caption,
+        )
+        Spacer(Modifier.height(10.dp))
+        when (settings.aiProvider) {
+            com.polylingua.edge.core.AiProviderKind.GEMINI -> {
+                KeyField(vm, com.polylingua.edge.core.SecureKeyStore.Slot.GEMINI, revision)
+                ModelField("Gemini model", settings.geminiModel, listOf("gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-2.5-flash")) { m -> vm.update { it.copy(geminiModel = m) } }
+                Text("Free key (with daily limits) at aistudio.google.com/apikey. Gemini can also transcribe your answers (Speech recognition → Final transcript → Gemini).", style = PolyType.Caption)
+                GhostButton("Get a Gemini API key", { vm.openUrl("https://aistudio.google.com/apikey") }, icon = PolyIcons.Globe)
+            }
+            com.polylingua.edge.core.AiProviderKind.CLAUDE -> {
+                KeyField(vm, com.polylingua.edge.core.SecureKeyStore.Slot.CLAUDE, revision)
+                ModelField("Claude model", settings.claudeModel, listOf("claude-haiku-5-5", "claude-sonnet-5-5")) { m -> vm.update { it.copy(claudeModel = m) } }
+                Text("Create a key in the Claude Console (pay-as-you-go API billing, separate from Claude Pro). Haiku 5.5 is the fast, low-cost choice.", style = PolyType.Caption)
+                GhostButton("Open Claude Console", { vm.openUrl("https://console.anthropic.com/settings/keys") }, icon = PolyIcons.Globe)
+            }
+            com.polylingua.edge.core.AiProviderKind.OPENAI_COMPAT -> {
+                var base by remember(settings.openAiBaseUrl) { mutableStateOf(settings.openAiBaseUrl) }
+                OutlinedTextField(base, { base = it.trim() }, Modifier.fillMaxWidth(), singleLine = true,
+                    label = { Text("Base URL (…/v1)") }, placeholder = { Text("https://openrouter.ai/api/v1 or http://192.168.1.5:1234/v1", style = PolyType.Caption) },
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PolyColors.ElectricTeal, unfocusedBorderColor = PolyColors.FrostedBorder))
+                GhostButton("Save URL", { vm.update { it.copy(openAiBaseUrl = base) } })
+                ModelField("Model", settings.openAiModel, emptyList()) { m -> vm.update { it.copy(openAiModel = m) } }
+                KeyField(vm, com.polylingua.edge.core.SecureKeyStore.Slot.OPENAI, revision, optional = true)
+                Text("Works with OpenRouter, Groq, Together, or a model running on your PC (LM Studio / Ollama on the same Wi-Fi).", style = PolyType.Caption)
+            }
+            com.polylingua.edge.core.AiProviderKind.ON_DEVICE -> {
+                Text(
+                    when (val s = llmState) {
+                        is LlmState.Ready -> "Loaded: ${s.pack}"
+                        is LlmState.Loading -> "Loading ${s.pack}…"
+                        is LlmState.Error -> s.message
+                        LlmState.NotInstalled -> "No GGUF model installed (download Qwen2.5 1.5B or SmolLM2 in the Offline AI coach section above)"
+                        LlmState.Unloaded -> "Loads on first use (2 threads on Cortex-A76)"
+                    },
+                    style = PolyType.Caption,
+                )
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            GhostButton("Test ${settings.aiProvider.label.substringBefore(" (")}", { vm.testProvider(settings.aiProvider) }, icon = PolyIcons.Bolt)
+            Spacer(Modifier.width(8.dp))
+            health[settings.aiProvider]?.let { h ->
+                Text((if (h.ok) "✓ " else "✗ ") + h.message, style = PolyType.Caption.copy(color = if (h.ok) PolyColors.NeonMintSuccess else PolyColors.CrimsonAlert), maxLines = 3)
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Offline fallback", style = PolyType.Body)
+                Text("Use the on-device model when the cloud is unreachable", style = PolyType.Caption)
+            }
+            Switch(settings.aiOfflineFallback, { on -> vm.update { it.copy(aiOfflineFallback = on) } }, colors = SwitchDefaults.colors(checkedTrackColor = PolyColors.ElectricTeal))
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Use on-device LLM", style = PolyType.Body)
+                Text("Qwen2.5 1.5B / SmolLM2 via llama.cpp (offline)", style = PolyType.Caption)
+            }
+            Switch(settings.useLlmCoach, { on -> vm.update { it.copy(useLlmCoach = on) } }, colors = SwitchDefaults.colors(checkedTrackColor = PolyColors.ElectricTeal))
+        }
+        val llmPacks = listOf(ModelCatalog.LLM_QWEN, ModelCatalog.LLM_SMOL)
+        ChoiceChips(llmPacks.map { it.title }, setOf(llmPacks.indexOfFirst { it.id == settings.llmPackId }.coerceAtLeast(0)),
+            { i -> vm.update { it.copy(llmPackId = llmPacks[i].id) } })
+        Spacer(Modifier.height(6.dp))
+        GhostButton("Load on-device model now", vm::loadLlm, icon = PolyIcons.Cpu)
+    }
+}
+
+@Composable
+private fun KeyField(vm: SetupViewModel, slot: com.polylingua.edge.core.SecureKeyStore.Slot, revision: Int, optional: Boolean = false) {
+    var key by remember(slot, revision) { mutableStateOf("") }
+    val saved = remember(slot, revision) { vm.maskedKey(slot) }
+    OutlinedTextField(
+        key, { key = it.trim() }, Modifier.fillMaxWidth(), singleLine = true,
+        label = { Text(slot.label + if (optional) " (optional)" else "") },
+        placeholder = { Text(if (saved.isNotBlank()) "Saved: $saved" else "Paste your key", style = PolyType.Caption) },
+        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PolyColors.ElectricTeal, unfocusedBorderColor = PolyColors.FrostedBorder),
+    )
+    Spacer(Modifier.height(6.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        PrimaryButton("Save key", { vm.saveKey(slot, key); key = "" }, enabled = key.length >= 8, icon = PolyIcons.Lock)
+        if (saved.isNotBlank()) GhostButton("Remove", { vm.saveKey(slot, "") }, color = PolyColors.CrimsonAlert)
+    }
+    Spacer(Modifier.height(8.dp))
+}
+
+@Composable
+private fun ModelField(label: String, value: String, presets: List<String>, onSave: (String) -> Unit) {
+    var text by remember(value) { mutableStateOf(value) }
+    if (presets.isNotEmpty()) {
+        ChoiceChips(presets, setOf(presets.indexOf(value)).filter { it >= 0 }.toSet(), { i -> onSave(presets[i]) })
+        Spacer(Modifier.height(6.dp))
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        OutlinedTextField(text, { text = it.trim() }, Modifier.weight(1f), singleLine = true, label = { Text(label) },
+            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PolyColors.ElectricTeal, unfocusedBorderColor = PolyColors.FrostedBorder))
+        Spacer(Modifier.width(6.dp))
+        GhostButton("Use", { if (text.isNotBlank()) onSave(text) })
+    }
+    Spacer(Modifier.height(8.dp))
+}
+
+@Composable
+private fun DiagnosticsCard(vm: SetupViewModel) {
+    val lines by vm.diagLines.collectAsStateWithLifecycle()
+    FrostedCard {
+        Text("$lines log lines recorded this session (downloads, voices, recognisers, AI calls). API keys are never logged.", style = PolyType.Caption)
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PrimaryButton("Share log", vm::shareDiagnostics, Modifier.weight(1f), icon = PolyIcons.Share)
+            GhostButton("Copy", vm::copyDiagnostics, icon = PolyIcons.Cards)
+            GhostButton("Clear", vm::clearDiagnostics, color = PolyColors.MutedSlateText)
         }
     }
 }

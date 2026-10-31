@@ -7,7 +7,7 @@ import com.polylingua.edge.domain.LexicalUpgradeDictionary
 import com.polylingua.edge.domain.TextAnalysis
 import com.polylingua.edge.domain.model.CefrLevel
 import com.polylingua.edge.speech.ChatTurn
-import com.polylingua.edge.speech.LocalLlmEngine
+import com.polylingua.edge.ai.AiCoach
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.emitAll
@@ -189,13 +189,14 @@ data class UtteranceFeedback(
 }
 
 /**
- * Offline conversation engine for the 12 personas. With a GGUF model installed, replies come from
- * the on-device LLM conditioned on the persona; otherwise a curriculum-driven dialogue manager
+ * Conversation engine for the 12 personas. Replies come from the selected AI coach (Gemini,
+ * Claude, an OpenAI-compatible endpoint or the on-device GGUF model) conditioned on the persona;
+ * with no model available, a curriculum-driven dialogue manager
  * reacts to the learner's content, shares persona anecdotes and moves through Part 1 -> Part 3
  * style questions of the persona's domains. Feedback is always computed locally.
  */
 @Singleton
-class OfflinePersonaEngine @Inject constructor(private val llm: LocalLlmEngine) {
+class OfflinePersonaEngine @Inject constructor(private val llm: AiCoach) {
 
     inner class Conversation(val persona: Persona, private val level: CefrLevel, val motion: String? = null) {
         private val debateDomain: Domain? = motion?.let { m -> CurriculumContent.ALL.firstOrNull { d -> d.debate.any { it == m } } }
@@ -359,7 +360,7 @@ class OfflinePersonaEngine @Inject constructor(private val llm: LocalLlmEngine) 
             llm.correct(text, level.name)?.let { c ->
                 if (c.corrected.isNotBlank()) {
                     corrected = c.corrected
-                    source = "on-device AI"
+                    source = if (llm.isCloudActive) "AI coach (${llm.activeLabel})" else "on-device AI"
                     if (c.explanation.isNotBlank()) notes += c.explanation
                     if (c.nativeAlternative.isNotBlank() && !c.nativeAlternative.equals(c.corrected, true)) notes += "Native-like: \"${c.nativeAlternative}\""
                 }

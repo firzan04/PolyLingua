@@ -1,18 +1,33 @@
 package com.polylingua.edge.speech
 
+import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.ConnectivityManager
+import android.os.Build
 import android.os.Environment
 import android.os.StatFs
 import android.util.Log
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
+import com.polylingua.edge.MainActivity
 import com.polylingua.edge.PolyLinguaForegroundService
+import com.polylingua.edge.R
 import com.polylingua.edge.core.AppSettings
+import com.polylingua.edge.core.DiagLog
 import com.polylingua.edge.core.ModelStorage
+import com.polylingua.edge.core.UserNotices
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -41,6 +56,8 @@ sealed interface PackStatus {
     data class Downloading(val bytes: Long, val total: Long, val bytesPerSec: Long) : PackStatus {
         val fraction: Float get() = if (total > 0) (bytes.toDouble() / total).toFloat().coerceIn(0f, 1f) else 0f
     }
+    /** Download finished; files are being verified / moved into place. */
+    data object Finishing : PackStatus
     data class Installed(val dir: File, val onSdCard: Boolean, val diskBytes: Long) : PackStatus
     data class Failed(val message: String) : PackStatus
 }
@@ -123,8 +140,11 @@ class ModelManager @Inject constructor(
         val roots = storageRoots()
         for (pack in ModelCatalog.ALL) {
             val current = _statuses.value[pack.id]
-            if (current is PackStatus.Downloading || current is PackStatus.Queued) {
-                map[pack.id] = current
+            val inFlight = current is PackStatus.Downloading || current is PackStatus.Queued || current is PackStatus.Finishing
+            // Only keep an in-flight status while its job is really running; a finished job must
+            // never leave the card frozen at "99 %".
+            if (inFlight && jobs[pack.id]?.isActive == true) {
+                map[pack.id] = current!!
                 continue
             }
             val dir = roots.firstNotNullOfOrNull { r -> File(modelsDir(r.dir), pack.id).takeIf { isComplete(pack, it) }?.let { it to r.removable } }
@@ -147,34 +167,97 @@ class ModelManager @Inject constructor(
 
     /** Queues [packs] for download; returns immediately. Progress is published on [statuses]. */
     fun enqueue(packs: List<ModelPack>) {
-        for (pack in packs) {
-            if (isInstalled(pack) || jobs[pack.id]?.isActive == true) continue
+        val queued = packs.filter { !isInstalled(it) && jobs[it.id]?.isActive != true }
+        if (queued.isEmpty()) {
+            if (packs.isNotEmpty()) UserNotices.post("Already installed: ${packs.joinToString { it.title }}", UserNotices.Kind.SUCCESS)
+            rescan()
+            return
+        }
+        synchronized(batch) { batch.total += queued.size }
+        for (pack in queued) {
             setStatus(pack.id, PackStatus.Queued)
-            jobs[pack.id] = scope.launch {
-                downloadMutex.withLock {
-                    try {
-                        PolyLinguaForegroundService.acquire(context, PolyLinguaForegroundService.Reason.DOWNLOAD, pack.title)
-                        install(pack)
-                        rescan()
-                    } catch (e: CancellationException) {
-                        setStatus(pack.id, PackStatus.NotInstalled)
-                        throw e
-                    } catch (t: Throwable) {
-                        Log.e(TAG, "Install of ${pack.id} failed", t)
-                        setStatus(pack.id, PackStatus.Failed(t.message ?: t.javaClass.simpleName))
-                    } finally {
-                        if (jobs.values.count { it.isActive } <= 1) {
-                            PolyLinguaForegroundService.release(context, PolyLinguaForegroundService.Reason.DOWNLOAD)
+            val job = scope.launch(start = kotlinx.coroutines.CoroutineStart.LAZY) {
+                var outcome: Boolean? = null
+                try {
+                    downloadMutex.withLock {
+                        try {
+                            PolyLinguaForegroundService.acquire(context, PolyLinguaForegroundService.Reason.DOWNLOAD, pack.title)
+                            DiagLog.i(TAG, "Installing ${pack.id} from ${pack.url}")
+                            install(pack)
+                            // Publish the final state explicitly (never rely on a later rescan).
+                            val dir = locate(pack) ?: throw IOException("Files for ${pack.title} were not found after extraction")
+                            val onSd = storageRoots().firstOrNull { dir.absolutePath.startsWith(it.dir.absolutePath) }?.removable == true
+                            val size = dirSize(dir)
+                            setStatus(pack.id, PackStatus.Installed(dir, onSd, size))
+                            DiagLog.i(TAG, "Installed ${pack.id} (${size / 1_048_576} MB) in $dir")
+                            outcome = true
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (t: Throwable) {
+                            DiagLog.e(TAG, "Install of ${pack.id} failed", t)
+                            setStatus(pack.id, PackStatus.Failed(t.message ?: t.javaClass.simpleName))
+                            outcome = false
                         }
                     }
+                } catch (e: CancellationException) {
+                    setStatus(pack.id, PackStatus.NotInstalled)
+                    DiagLog.i(TAG, "Download of ${pack.id} cancelled")
+                    throw e
+                } finally {
+                    jobs.remove(pack.id, coroutineContext.job)
+                    onJobFinished(pack, outcome)
                 }
             }
+            jobs[pack.id] = job
+            job.start()
         }
     }
+
+    private class Batch {
+        var total = 0
+        var ok = 0
+        var failed = 0
+        val names = ArrayList<String>()
+    }
+    private val batch = Batch()
+
+    /** Posts per-pack and end-of-queue notifications; releases the foreground service when idle. */
+    private fun onJobFinished(pack: ModelPack, outcome: Boolean?) {
+        val (finishedAll, summary) = synchronized(batch) {
+            when (outcome) {
+                true -> { batch.ok++; batch.names += pack.title }
+                false -> batch.failed++
+                null -> batch.total = (batch.total - 1).coerceAtLeast(0)
+            }
+            val done = batch.ok + batch.failed >= batch.total
+            val s = Triple(batch.ok, batch.failed, batch.names.toList())
+            if (done) { batch.total = 0; batch.ok = 0; batch.failed = 0; batch.names.clear() }
+            done to s
+        }
+        when (outcome) {
+            true -> {
+                notifier.installed(pack)
+                UserNotices.post("✓ ${pack.title} installed", UserNotices.Kind.SUCCESS)
+            }
+            false -> {
+                val msg = (statuses.value[pack.id] as? PackStatus.Failed)?.message.orEmpty()
+                notifier.failed(pack, msg)
+                UserNotices.post("✗ ${pack.title}: $msg", UserNotices.Kind.ERROR)
+            }
+            null -> {}
+        }
+        if (finishedAll || jobs.values.none { it.isActive }) {
+            PolyLinguaForegroundService.release(context, PolyLinguaForegroundService.Reason.DOWNLOAD)
+            if (finishedAll && summary.first + summary.second > 1) notifier.summary(summary.first, summary.second, summary.third)
+        }
+    }
+
+    private val notifier = DownloadNotifier(context)
 
     fun cancel(packId: String) {
         jobs.remove(packId)?.cancel()
         setStatus(packId, PackStatus.NotInstalled)
+        if (jobs.values.none { it.isActive }) PolyLinguaForegroundService.release(context, PolyLinguaForegroundService.Reason.DOWNLOAD)
     }
 
     suspend fun delete(pack: ModelPack) = withContext(Dispatchers.IO) {
@@ -211,6 +294,8 @@ class ModelManager @Inject constructor(
             }
         }
         lastError?.let { throw it }
+        setStatus(pack.id, PackStatus.Finishing)
+        PolyLinguaForegroundService.update(context, PolyLinguaForegroundService.Reason.DOWNLOAD, "${pack.title}: verifying…")
         val missing = pack.requiredFiles.filterNot { File(partialDir, it).isFile }
         if (missing.isNotEmpty()) throw IOException("Archive is missing ${missing.joinToString()}")
         File(partialDir, MARKER).writeText(
@@ -253,6 +338,7 @@ class ModelManager @Inject constructor(
                 }
             }
             if (body.contentLength() > 0 && part.length() < total) throw IOException("Download interrupted (${part.length()} / $total bytes)")
+            meter.finish()
         }
         target.delete()
         if (!part.renameTo(target)) throw IOException("Could not finalise ${target.name}")
@@ -295,6 +381,7 @@ class ModelManager @Inject constructor(
                     }
                 }
             }
+            meter.finish()
         }
     }
 
@@ -307,6 +394,11 @@ class ModelManager @Inject constructor(
     }
 
     private inner class ProgressMeter(private val id: String, private val total: Long, start: Long) {
+        /** Publishes 100 % once the stream is fully consumed (the 250 ms throttle may skip it). */
+        fun finish() {
+            setStatus(id, PackStatus.Downloading(total, total, speed))
+        }
+
         private var bytes = start
         private var lastEmit = 0L
         private var windowStart = System.nanoTime()
@@ -348,4 +440,74 @@ class ModelManager @Inject constructor(
         private const val PARTIAL = ".partial"
         private const val USER_AGENT = "PolyLinguaEdge/1.0 (Android; offline model fetch)"
     }
+}
+
+/**
+ * User-visible "download finished / failed" notifications (separate from the silent ongoing
+ * foreground-service notification, which disappears as soon as the queue is idle).
+ */
+private class DownloadNotifier(private val context: Context) {
+    companion object {
+        const val CHANNEL_ID = "polylingua_downloads"
+        private const val SUMMARY_ID = 4200
+    }
+
+    private fun ensureChannel(): Boolean {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (nm.getNotificationChannel(CHANNEL_ID) == null) {
+            nm.createNotificationChannel(
+                NotificationChannel(CHANNEL_ID, "Model downloads", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                    description = "Tells you when an offline model pack has finished installing or failed"
+                    setShowBadge(true)
+                },
+            )
+        }
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) return false
+        return NotificationManagerCompat.from(context).areNotificationsEnabled()
+    }
+
+    private fun openSetup(): PendingIntent = PendingIntent.getActivity(
+        context, 7,
+        Intent(context, MainActivity::class.java)
+            .putExtra(MainActivity.EXTRA_ROUTE, "setup")
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+    )
+
+    private fun post(id: Int, title: String, text: String) {
+        if (!ensureChannel()) return
+        val n = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_stat_polylingua)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setAutoCancel(true)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setContentIntent(openSetup())
+            .build()
+        try {
+            NotificationManagerCompat.from(context).notify(id, n)
+        } catch (_: SecurityException) {
+        }
+    }
+
+    fun installed(pack: ModelPack) = post(
+        4300 + (pack.id.hashCode() and 0xff),
+        "✓ ${pack.title} installed",
+        "${pack.sizeMb} MB · ready to use offline. ${pack.kind.title} is now active.",
+    )
+
+    fun failed(pack: ModelPack, message: String) = post(
+        4300 + (pack.id.hashCode() and 0xff),
+        "✗ ${pack.title} failed",
+        "$message\nOpen Models & settings and tap Retry.",
+    )
+
+    fun summary(ok: Int, failed: Int, names: List<String>) = post(
+        SUMMARY_ID,
+        if (failed == 0) "All $ok model packs installed" else "$ok installed · $failed failed",
+        names.joinToString(" · ").ifBlank { "Open Models & settings for details." },
+    )
 }

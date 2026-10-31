@@ -47,7 +47,7 @@ import com.polylingua.edge.domain.model.WordPronunciation
 import com.polylingua.edge.network.WordDiff
 import com.polylingua.edge.speech.AssessmentPipeline
 import com.polylingua.edge.speech.AudioClip
-import com.polylingua.edge.speech.LocalLlmEngine
+import com.polylingua.edge.ai.AiCoach
 import com.polylingua.edge.speech.PlaybackState
 import com.polylingua.edge.speech.SpeechSynthesisEngine
 import com.polylingua.edge.ui.DashboardPayload
@@ -89,7 +89,7 @@ class DashboardViewModel @Inject constructor(
     private val tts: SpeechSynthesisEngine,
     private val pipeline: AssessmentPipeline,
     private val vault: SessionArtifactStore,
-    private val llm: LocalLlmEngine,
+    private val llm: AiCoach,
 ) : ViewModel() {
     val payload: StateFlow<DashboardPayload?> = store.current
     val playback: StateFlow<PlaybackState> = tts.player.state
@@ -98,6 +98,11 @@ class DashboardViewModel @Inject constructor(
     val deepStatus: StateFlow<String?> = _deep
 
     val llmAvailable: Boolean get() = llm.isAvailable
+    val aiLabel: String get() = llm.activeLabel
+
+    private val _examiner = MutableStateFlow<String?>(null)
+    /** Examiner-style written comments from the cloud AI coach (null until requested). */
+    val examinerNote: StateFlow<String?> = _examiner
 
     fun speak(text: String, label: String) {
         viewModelScope.launch { tts.speak(text, label = label) }
@@ -115,7 +120,12 @@ class DashboardViewModel @Inject constructor(
         val p = payload.value ?: return
         if (!llm.isAvailable || _deep.value != null) return
         viewModelScope.launch {
-            _deep.value = "Starting offline AI review…"
+            _deep.value = "Starting AI review (${llm.activeLabel})…"
+            if (llm.isCloudActive) {
+                val a = p.assessment
+                val bands = "overall %.1f · FC %.1f · LR %.1f · GRA %.1f · P %.1f".format(a.overallBand, a.fc.band, a.lr.band, a.gra.band, a.p.band)
+                _examiner.value = llm.examinerComments(p.context.prompt, p.sample.transcript, bands, a.cefr.name)
+            }
             val issues = pipeline.deepGrammarCheck(p.sample.transcript, p.assessment.cefr.name) { i, n -> _deep.value = "Reviewing sentence ${minOf(i + 1, n)}/$n…" }
             if (issues.isEmpty()) {
                 _deep.value = "AI review found no further corrections."
@@ -139,6 +149,7 @@ fun BentoDiagnosticDashboardScreen(nav: NavHostController, vm: DashboardViewMode
     val payload by vm.payload.collectAsStateWithLifecycle()
     val playback by vm.playback.collectAsStateWithLifecycle()
     val deep by vm.deepStatus.collectAsStateWithLifecycle()
+    val examinerNote by vm.examinerNote.collectAsStateWithLifecycle()
     var remediation by remember { mutableStateOf<Pair<WordPronunciation, PhonemeScore>?>(null) }
     val context = LocalContext.current
     val p = payload
@@ -325,7 +336,16 @@ fun BentoDiagnosticDashboardScreen(nav: NavHostController, vm: DashboardViewMode
                     BulletList(a.criteria.flatMap { it.nextSteps }.distinct().take(8), color = PolyColors.AmberWarning)
                     Spacer(Modifier.height(12.dp))
                     if (vm.llmAvailable) {
-                        GhostButton(deep ?: "Deep grammar check (offline AI)", vm::deepCheck, Modifier.fillMaxWidth(), icon = PolyIcons.Sparkle, enabled = deep == null)
+                        GhostButton(deep ?: "AI review · ${vm.aiLabel}", vm::deepCheck, Modifier.fillMaxWidth(), icon = PolyIcons.Sparkle, enabled = deep == null)
+                        Spacer(Modifier.height(8.dp))
+                    } else {
+                        Text("Add a Gemini or Claude API key (or download an on-device model) in Models & settings → AI coach to unlock the AI review.", style = PolyType.Caption)
+                        Spacer(Modifier.height(8.dp))
+                    }
+                    examinerNote?.let { note ->
+                        Text("AI examiner comments", style = PolyType.CardTitle.copy(color = PolyColors.ElectricTeal))
+                        Spacer(Modifier.height(4.dp))
+                        Text(note, style = PolyType.Body.copy(fontSize = 14.sp, lineHeight = 21.sp))
                         Spacer(Modifier.height(8.dp))
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

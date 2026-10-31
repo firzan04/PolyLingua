@@ -6,8 +6,15 @@ import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.os.SystemClock
 import android.util.Log
+import com.polylingua.edge.ai.AiCoach
+import com.polylingua.edge.core.AppSettings
 import com.polylingua.edge.core.CoreExecutors
+import com.polylingua.edge.core.DiagLog
+import com.polylingua.edge.core.NativeLoadGuard
+import com.polylingua.edge.core.UserNotices
+import com.polylingua.edge.core.UserSettings
 import com.polylingua.edge.domain.model.SpeechSegment
 import com.polylingua.edge.domain.model.WordTiming
 import com.polylingua.edge.dsp.OboeAudioRecorder
@@ -56,10 +63,15 @@ data class FinalTranscript(
     val durationSec: Double,
     val engine: String,
     val audio: ShortArray,
+    /** SystemClock.elapsedRealtimeNanos() of the first captured sample (0 = unknown). */
+    val startedAtElapsedNs: Long = 0L,
 )
 
+/** A transcribed stretch of a long recording (Cake auto-subtitles). */
+data class TimedSegment(val startSec: Double, val endSec: Double, val text: String)
+
 enum class AsrBackend(val label: String) {
-    SHERPA_OFFLINE("On-device Zipformer (offline)"),
+    SHERPA_OFFLINE("On-device speech recognition (offline)"),
     ANDROID_SYSTEM("Android speech recogniser (limited)"),
     NONE("No speech recogniser installed"),
 }
@@ -75,9 +87,11 @@ interface RecognitionSession {
 }
 
 /**
- * Offline speech recognition: sherpa-onnx streaming Zipformer (live captions + token timestamps),
- * Silero VAD (speech segments for pause/phonation analysis), optional Moonshine second pass and
- * punctuation restoration. Falls back to the Android recogniser when no model pack is installed.
+ * Offline speech recognition: a sherpa-onnx streaming recogniser (NeMo FastConformer / Nemotron /
+ * Zipformer) for live captions and token timestamps, Silero VAD for speech segments, and a
+ * final-transcript pass (NVIDIA Parakeet, Moonshine, or Gemini in the cloud when chosen) that
+ * produces the text used for grammar and vocabulary scoring. Falls back to the Android
+ * recogniser when no model pack is installed.
  */
 @Singleton
 class SpeechRecognitionEngine @Inject constructor(
@@ -85,44 +99,111 @@ class SpeechRecognitionEngine @Inject constructor(
     private val models: ModelManager,
     private val recorder: OboeAudioRecorder,
     private val residency: ModelResidency,
+    private val settings: AppSettings,
+    private val ai: AiCoach,
+    private val guard: NativeLoadGuard,
 ) : ResidentModel {
 
     private val lock = Any()
     private var recognizer = 0L
+    private var loadedLive: ModelPack? = null
+    private var loadedRule2 = 0f
     private var vad = 0L
     private var punct = 0L
     private var offline = 0L
+    private var loadedOffline: ModelPack? = null
+
+    private val _finalizing = MutableStateFlow<String?>(null)
+    /** Progress of the final-transcript pass ("Parakeet 0.6B · 2/4"), null when idle. */
+    val finalizing: StateFlow<String?> = _finalizing
 
     override val residencyKey = "asr"
     override val residentMb: Int
-        get() = ModelCatalog.ASR_ZIPFORMER.residentMb + ModelCatalog.VAD_SILERO.residentMb +
-            ModelCatalog.PUNCTUATION.residentMb + if (offline != 0L) ModelCatalog.ASR_MOONSHINE.residentMb else 0
+        get() = (loadedLive?.residentMb ?: 0) + ModelCatalog.VAD_SILERO.residentMb +
+            ModelCatalog.PUNCTUATION.residentMb + (loadedOffline?.residentMb ?: 0)
+
+    private fun usable(pack: ModelPack) = models.isInstalled(pack) && !guard.isBlocked(pack.id)
+
+    /** Streaming pack for live captions: the user's choice if usable, else the most accurate installed. */
+    fun livePack(): ModelPack? {
+        val installed = ModelCatalog.STREAMING_ASR.filter { usable(it) }
+        val wanted = settings.settings.value.liveAsrPackId
+        return installed.firstOrNull { it.id == wanted } ?: installed.maxByOrNull { it.asr?.rank ?: 0 }
+    }
+
+    /** Offline final-transcript pack (null when disabled or none installed). */
+    fun secondPassPack(): ModelPack? {
+        val wanted = settings.settings.value.finalAsrPackId
+        if (wanted == UserSettings.FINAL_ASR_OFF) return null
+        val installed = ModelCatalog.SECOND_PASS_ASR.filter { usable(it) }
+        return installed.firstOrNull { it.id == wanted } ?: installed.maxByOrNull { it.asr?.rank ?: 0 }
+    }
+
+    /** "NeMo FastConformer … + Parakeet …" for settings and the arena. */
+    fun engineSummary(): String {
+        val live = livePack()?.title ?: return backend().label
+        val s = settings.settings.value
+        val fin = when {
+            s.finalAsrPackId == UserSettings.FINAL_ASR_GEMINI -> "Gemini (cloud) final transcript" + (secondPassPack()?.let { ", offline fallback ${it.title}" } ?: "")
+            else -> secondPassPack()?.let { "final pass ${it.title}" } ?: "no final pass"
+        }
+        return "$live · $fin"
+    }
 
     fun backend(): AsrBackend = when {
-        models.isInstalled(ModelCatalog.ASR_ZIPFORMER) && NativeLoader.ensureLoaded() -> AsrBackend.SHERPA_OFFLINE
+        livePack() != null && NativeLoader.ensureLoaded() -> AsrBackend.SHERPA_OFFLINE
         SpeechRecognizer.isRecognitionAvailable(context) -> AsrBackend.ANDROID_SYSTEM
         else -> AsrBackend.NONE
     }
 
     val hasVad: Boolean get() = models.isInstalled(ModelCatalog.VAD_SILERO)
 
-    /** Loads the streaming models (idempotent). Returns false if the offline pack is missing. */
-    suspend fun prepare(): Boolean = withContext(CoreExecutors.realtime) {
-        if (backend() != AsrBackend.SHERPA_OFFLINE) return@withContext false
-        synchronized(lock) {
-            if (recognizer == 0L) {
-                residency.reserve(residencyKey, residentMb)
-                val dir = models.locate(ModelCatalog.ASR_ZIPFORMER) ?: return@withContext false
-                recognizer = SherpaNative.nativeCreateOnlineRecognizer(
-                    encoder = "$dir/encoder-epoch-99-avg-1.int8.onnx",
-                    decoder = "$dir/decoder-epoch-99-avg-1.onnx",
-                    joiner = "$dir/joiner-epoch-99-avg-1.int8.onnx",
-                    tokens = "$dir/tokens.txt",
-                    numThreads = 1,
+    private fun createOnline(pack: ModelPack, rule2: Float): Long {
+        val spec = pack.asr ?: return 0L
+        val dir = models.locate(pack) ?: return 0L
+        return guard.guarded(pack.id) {
+            runCatching {
+                SherpaNative.nativeCreateOnlineRecognizer(
+                    encoder = "$dir/${spec.files[0]}",
+                    decoder = "$dir/${spec.files[1]}",
+                    joiner = "$dir/${spec.files[2]}",
+                    tokens = "$dir/${spec.tokens}",
+                    numThreads = spec.threads,
                     decodingMethod = "greedy_search",
                     enableEndpoint = true,
-                    rule1 = 2.4f, rule2 = 1.2f, rule3 = 30f,
+                    rule1 = 2.4f, rule2 = rule2, rule3 = 30f,
+                    modelType = spec.modelType,
                 )
+            }.getOrElse { DiagLog.e(TAG, "Creating ${pack.id} threw", it); 0L }
+        }
+    }
+
+    /** Loads the streaming models (idempotent). Returns false if no usable pack is installed. */
+    suspend fun prepare(): Boolean = withContext(CoreExecutors.realtime) {
+        if (backend() != AsrBackend.SHERPA_OFFLINE) return@withContext false
+        val wanted = livePack() ?: return@withContext false
+        val rule2 = settings.settings.value.turnEndSilenceSec
+        synchronized(lock) {
+            if (recognizer != 0L && (loadedLive?.id != wanted.id || loadedRule2 != rule2)) {
+                SherpaNative.nativeDestroyOnlineRecognizer(recognizer)
+                recognizer = 0L
+                loadedLive = null
+            }
+            if (recognizer == 0L) {
+                val candidates = listOf(wanted) + ModelCatalog.STREAMING_ASR.filter { it != wanted && usable(it) }.sortedByDescending { it.asr?.rank ?: 0 }
+                for (pack in candidates) {
+                    residency.reserve(residencyKey, pack.residentMb + ModelCatalog.VAD_SILERO.residentMb + ModelCatalog.PUNCTUATION.residentMb + (loadedOffline?.residentMb ?: 0))
+                    val t0 = SystemClock.elapsedRealtime()
+                    recognizer = createOnline(pack, rule2)
+                    if (recognizer != 0L) {
+                        loadedLive = pack
+                        loadedRule2 = rule2
+                        DiagLog.i(TAG, "Live recogniser ${pack.id} loaded in ${SystemClock.elapsedRealtime() - t0} ms")
+                        if (pack != wanted) UserNotices.post("${wanted.title} could not be loaded; using ${pack.title}.", UserNotices.Kind.WARNING)
+                        break
+                    }
+                    DiagLog.e(TAG, "Live recogniser ${pack.id} failed to load")
+                }
                 if (recognizer == 0L) return@withContext false
                 residency.register(this@SpeechRecognitionEngine)
             }
@@ -141,26 +222,44 @@ class SpeechRecognitionEngine @Inject constructor(
         }
     }
 
-    /** Lazily loads the Moonshine second-pass recogniser on the big-core inference thread. */
+    /** Lazily loads the selected final-transcript recogniser on the big-core inference thread. */
     private suspend fun ensureSecondPass(): Boolean = withContext(CoreExecutors.inference) {
+        val pack = secondPassPack() ?: return@withContext false
         synchronized(lock) {
-            if (offline != 0L) return@withContext true
-            val dir = models.locate(ModelCatalog.ASR_MOONSHINE) ?: return@withContext false
-            residency.reserve(residencyKey, residentMb + ModelCatalog.ASR_MOONSHINE.residentMb)
-            offline = SherpaNative.nativeCreateOfflineRecognizer(
-                "moonshine", "$dir/preprocess.onnx", "$dir/encode.int8.onnx", "$dir/uncached_decode.int8.onnx",
-                "$dir/cached_decode.int8.onnx", "$dir/tokens.txt", CoreExecutors.inferenceThreads,
-            )
+            if (offline != 0L && loadedOffline?.id == pack.id) return@withContext true
+            if (offline != 0L) {
+                SherpaNative.nativeDestroyOfflineRecognizer(offline)
+                offline = 0L
+                loadedOffline = null
+            }
+            val spec = pack.asr ?: return@withContext false
+            val dir = models.locate(pack) ?: return@withContext false
+            residency.reserve(residencyKey, residentMb + pack.residentMb)
+            val f = spec.files.map { "$dir/$it" } + List(4) { "" }
+            val threads = maxOf(spec.threads, CoreExecutors.inferenceThreads)
+            val t0 = SystemClock.elapsedRealtime()
+            offline = guard.guarded(pack.id) {
+                runCatching {
+                    SherpaNative.nativeCreateOfflineRecognizer(spec.kind, f[0], f[1], f[2], f[3], "$dir/${spec.tokens}", threads)
+                }.getOrElse { DiagLog.e(TAG, "Creating ${pack.id} threw", it); 0L }
+            }
+            if (offline != 0L) {
+                loadedOffline = pack
+                DiagLog.i(TAG, "Final-pass recogniser ${pack.id} loaded in ${SystemClock.elapsedRealtime() - t0} ms")
+            } else {
+                DiagLog.e(TAG, "Final-pass recogniser ${pack.id} failed to load")
+                UserNotices.post("${pack.title} could not be loaded; the live transcript is used instead.", UserNotices.Kind.WARNING)
+            }
             offline != 0L
         }
     }
 
     override fun releaseForMemory() {
         synchronized(lock) {
-            if (offline != 0L) { SherpaNative.nativeDestroyOfflineRecognizer(offline); offline = 0L }
+            if (offline != 0L) { SherpaNative.nativeDestroyOfflineRecognizer(offline); offline = 0L; loadedOffline = null }
             if (punct != 0L) { SherpaNative.nativeDestroyOnlinePunctuation(punct); punct = 0L }
             if (vad != 0L) { SherpaNative.nativeDestroyVad(vad); vad = 0L }
-            if (recognizer != 0L) { SherpaNative.nativeDestroyOnlineRecognizer(recognizer); recognizer = 0L }
+            if (recognizer != 0L) { SherpaNative.nativeDestroyOnlineRecognizer(recognizer); recognizer = 0L; loadedLive = null }
         }
         residency.unregister(residencyKey)
     }
@@ -178,16 +277,20 @@ class SpeechRecognitionEngine @Inject constructor(
      * [OboeAudioRecorder]; the Android backend opens the microphone itself.
      * [conversation] enables endpoint segmentation into [RecognitionSession.utterances].
      */
-    suspend fun startSession(scope: CoroutineScope, conversation: Boolean = false): RecognitionSession? =
+    suspend fun startSession(scope: CoroutineScope, conversation: Boolean = false, hint: String = ""): RecognitionSession? =
         when (backend()) {
-            AsrBackend.SHERPA_OFFLINE -> if (prepare()) SherpaSession(scope, conversation).also { it.start() } else null
+            AsrBackend.SHERPA_OFFLINE -> if (prepare()) SherpaSession(scope, conversation, hint).also { it.start() } else null
             AsrBackend.ANDROID_SYSTEM -> withContext(Dispatchers.Main) { SystemSession(scope, conversation).also { it.start() } }
             AsrBackend.NONE -> null
         }
 
     // =================================================================== sherpa session
 
-    private inner class SherpaSession(private val scope: CoroutineScope, private val conversation: Boolean) : RecognitionSession {
+    private inner class SherpaSession(
+        private val scope: CoroutineScope,
+        private val conversation: Boolean,
+        private val hint: String,
+    ) : RecognitionSession {
         private val _live = MutableStateFlow(LiveTranscript())
         override val live: StateFlow<LiveTranscript> = _live
         private val _utterances = MutableSharedFlow<String>(extraBufferCapacity = 16)
@@ -205,6 +308,9 @@ class SpeechRecognitionEngine @Inject constructor(
         private var job: Job? = null
         private var tick = 0
         private var vadSpeaking = false
+        private var firstChunkAt = 0L
+        private var decodeNs = 0L
+        private var rtfWarned = false
 
         fun start() {
             synchronized(lock) {
@@ -217,12 +323,15 @@ class SpeechRecognitionEngine @Inject constructor(
         }
 
         private fun onChunk(chunk: ShortArray) {
+            if (firstChunkAt == 0L) firstChunkAt = SystemClock.elapsedRealtimeNanos() - chunk.size * 1_000_000_000L / 16000
             audio.append(chunk, chunk.size)
             val f = PcmUtils.shortsToFloats(chunk)
             synchronized(lock) {
                 if (recognizer == 0L || stream == 0L) return
                 SherpaNative.nativeOnlineAcceptWaveform(stream, 16000, f, f.size)
+                val t0 = System.nanoTime()
                 SherpaNative.nativeOnlineDecode(recognizer, stream)
+                decodeNs += System.nanoTime() - t0
                 if (vad != 0L) {
                     SherpaNative.nativeVadAcceptWaveform(vad, f, f.size)
                     vadSpeaking = SherpaNative.nativeVadIsSpeech(vad)
@@ -232,6 +341,15 @@ class SpeechRecognitionEngine @Inject constructor(
             energyVad.accept(chunk, chunk.size)
             fed += chunk.size
             if (++tick % 5 == 0) refresh(checkEndpoint = conversation)
+            if (!rtfWarned && fed >= 16000L * 12 && tick % 250 == 0) {
+                // Decode time / audio time: above ~0.9 the captions fall behind real time.
+                val rtf = decodeNs / 1e9 / (fed / 16000.0)
+                if (rtf > 0.9) {
+                    rtfWarned = true
+                    DiagLog.w(TAG, "Live recogniser ${loadedLive?.id} is slow on this phone (RTF %.2f)".format(rtf))
+                    UserNotices.post("Live captions are lagging on this phone (${loadedLive?.title}). Choose a lighter live model in Models & settings.", UserNotices.Kind.WARNING)
+                }
+            }
         }
 
         private fun popVadLocked() {
@@ -309,16 +427,29 @@ class SpeechRecognitionEngine @Inject constructor(
             val samples = audio.snapshot()
             val duration = samples.size / 16000.0
 
-            var engine = "zipformer"
-            var text = punctuate(liveText)
-            if (samples.size > 16000 && ensureSecondPass()) {
-                val second = secondPass(samples, segments)
-                if (second.isNotBlank()) {
-                    text = second
-                    engine = "zipformer+moonshine"
+            var engine = loadedLive?.asr?.engineTag ?: "streaming"
+            var text = ""
+            val s = settings.settings.value
+            try {
+                if (s.finalAsrPackId == UserSettings.FINAL_ASR_GEMINI && samples.size > 16000 && ai.canTranscribeInCloud()) {
+                    _finalizing.value = "Gemini is transcribing your answer…"
+                    ai.transcribe(samples, hint)?.let {
+                        text = it
+                        engine += "+gemini"
+                    }
                 }
+                if (text.isBlank() && samples.size > 16000 && ensureSecondPass()) {
+                    val second = secondPass(samples, segments)
+                    if (second.isNotBlank()) {
+                        text = second
+                        engine += "+" + (loadedOffline?.asr?.engineTag ?: "offline")
+                    }
+                }
+            } finally {
+                _finalizing.value = null
             }
-            return FinalTranscript(text, liveText, words, segments, duration, engine, samples)
+            text = if (text.isBlank()) punctuate(liveText) else if (!hasPunctuation(text)) punctuate(text) else text
+            return FinalTranscript(text, liveText, words, segments, duration, engine, samples, firstChunkAt)
         }
 
         override fun cancel() {
@@ -358,8 +489,11 @@ class SpeechRecognitionEngine @Inject constructor(
             if (curStart >= 0) chunks += curStart to curEnd
         }
         val parts = ArrayList<String>()
-        for ((a, b) in chunks) {
-            if (b - a < 4000) continue
+        val label = loadedOffline?.title?.substringBefore(" (") ?: "final pass"
+        val work = chunks.filter { (a, b) -> b - a >= 4000 }
+        for ((i, ab) in work.withIndex()) {
+            val (a, b) = ab
+            _finalizing.value = "Polishing the transcript with $label · ${i + 1}/${work.size}"
             val f = PcmUtils.shortsToFloats(samples.copyOfRange(a, b))
             val json = synchronized(lock) { if (offline != 0L) SherpaNative.nativeOfflineDecode(offline, f, 16000) else null } ?: break
             val t = runCatching { JSONObject(json).optString("text") }.getOrDefault("").trim()
@@ -507,6 +641,92 @@ class SpeechRecognitionEngine @Inject constructor(
         }
     }
 
+    // ============================================================ long recordings (Cake)
+
+    /**
+     * Transcribes a long 16 kHz recording (an imported video/podcast) into subtitle-sized
+     * segments: VAD finds the speech, segments are packed into <= 12 s lines, and each line is
+     * decoded with the final-pass model (or the streaming model when none is installed).
+     */
+    suspend fun transcribeLong(samples: ShortArray, onProgress: (Float) -> Unit): List<TimedSegment> {
+        if (backend() != AsrBackend.SHERPA_OFFLINE || !prepare()) throw IllegalStateException("Install an offline speech pack first (Models & settings).")
+        val segments = withContext(CoreExecutors.dsp) { detectSpeech(samples) }
+        val lines = packLines(segments, maxSec = 12.0, gapSec = 0.6)
+        val haveSecond = ensureSecondPass()
+        val out = ArrayList<TimedSegment>(lines.size)
+        for ((i, seg) in lines.withIndex()) {
+            onProgress(i.toFloat() / lines.size.coerceAtLeast(1))
+            val a = max(0, ((seg.startSec - 0.15) * 16000).toInt())
+            val b = min(samples.size, ((seg.endSec + 0.2) * 16000).toInt())
+            if (b - a < 3200) continue
+            val f = PcmUtils.shortsToFloats(samples.copyOfRange(a, b))
+            val json = if (haveSecond) withContext(CoreExecutors.inference) {
+                synchronized(lock) { if (offline != 0L) SherpaNative.nativeOfflineDecode(offline, f, 16000) else null }
+            } else withContext(CoreExecutors.realtime) { decodeWithStreaming(f) }
+            var text = runCatching { JSONObject(json ?: "{}").optString("text") }.getOrDefault("").trim()
+            if (text.isEmpty()) continue
+            if (!hasPunctuation(text)) text = punctuate(text)
+            out += TimedSegment(a / 16000.0, b / 16000.0, text)
+        }
+        onProgress(1f)
+        return out
+    }
+
+    /** Silero VAD over the whole recording (energy VAD when the Silero pack is missing). */
+    private fun detectSpeech(samples: ShortArray): List<SpeechSegment> {
+        val vadFile = models.file(ModelCatalog.VAD_SILERO, "silero_vad.onnx")
+        if (vadFile != null && NativeLoader.ensureLoaded()) {
+            val h = SherpaNative.nativeCreateVad(vadFile.absolutePath, 0.5f, 0.25f, 0.25f, 512, 30f, 16000, 1, 60f)
+            if (h != 0L) {
+                try {
+                    val out = ArrayList<SpeechSegment>()
+                    var pos = 0
+                    while (pos < samples.size) {
+                        val n = min(16000, samples.size - pos)
+                        val f = PcmUtils.shortsToFloats(samples.copyOfRange(pos, pos + n))
+                        SherpaNative.nativeVadAcceptWaveform(h, f, f.size)
+                        val segs = SherpaNative.nativeVadPopSegments(h)
+                        var i = 0
+                        while (i + 1 < segs.size) { out += SpeechSegment(segs[i] / 16000.0, (segs[i] + segs[i + 1]) / 16000.0); i += 2 }
+                        pos += n
+                    }
+                    SherpaNative.nativeVadFlush(h)
+                    val segs = SherpaNative.nativeVadPopSegments(h)
+                    var i = 0
+                    while (i + 1 < segs.size) { out += SpeechSegment(segs[i] / 16000.0, (segs[i] + segs[i + 1]) / 16000.0); i += 2 }
+                    if (out.isNotEmpty()) return out.sortedBy { it.startSec }
+                } finally {
+                    SherpaNative.nativeDestroyVad(h)
+                }
+            }
+        }
+        val ev = EnergyVad(16000)
+        var pos = 0
+        while (pos < samples.size) {
+            val n = min(320, samples.size - pos)
+            ev.accept(samples.copyOfRange(pos, pos + n), n)
+            pos += n
+        }
+        return ev.segments().ifEmpty { listOf(SpeechSegment(0.0, samples.size / 16000.0)) }
+    }
+
+    /** Feeds a clip through a fresh stream of the live recogniser (used when no final-pass model exists). */
+    private fun decodeWithStreaming(f: FloatArray): String? = synchronized(lock) {
+        if (recognizer == 0L) return null
+        val st = SherpaNative.nativeCreateOnlineStream(recognizer)
+        if (st == 0L) return null
+        try {
+            SherpaNative.nativeOnlineAcceptWaveform(st, 16000, f, f.size)
+            val pad = FloatArray(8000)
+            SherpaNative.nativeOnlineAcceptWaveform(st, 16000, pad, pad.size)
+            SherpaNative.nativeOnlineInputFinished(st)
+            SherpaNative.nativeOnlineDecode(recognizer, st)
+            SherpaNative.nativeOnlineGetResult(recognizer, st)
+        } finally {
+            SherpaNative.nativeDestroyOnlineStream(st)
+        }
+    }
+
     // ============================================================================ helpers
 
     private data class ParsedSegment(val text: String, val words: List<WordTiming>)
@@ -542,6 +762,8 @@ class SpeechRecognitionEngine @Inject constructor(
         return ParsedSegment(text, timings)
     }
 
+    private fun hasPunctuation(text: String): Boolean = text.any { it == '.' || it == '?' || it == '!' || it == ',' }
+
     private fun basicSentenceCase(text: String): String {
         val t = text.trim().replace(Regex("\\s+"), " ")
         if (t.isEmpty()) return t
@@ -549,6 +771,31 @@ class SpeechRecognitionEngine @Inject constructor(
         val cap = withI.replaceFirstChar { it.uppercaseChar() }
         return if (cap.last() in ".!?") cap else "$cap."
     }
+}
+
+/** Packs VAD segments into subtitle lines of at most [maxSec], merging pauses shorter than [gapSec]. */
+fun packLines(segments: List<SpeechSegment>, maxSec: Double, gapSec: Double): List<SpeechSegment> {
+    val out = ArrayList<SpeechSegment>()
+    var cur: SpeechSegment? = null
+    for (seg in segments.sortedBy { it.startSec }) {
+        // Split single segments that are longer than a line.
+        var s = seg.startSec
+        while (seg.endSec - s > maxSec * 1.25) {
+            val c = cur
+            if (c != null) { out += c; cur = null }
+            out += SpeechSegment(s, s + maxSec)
+            s += maxSec
+        }
+        val piece = SpeechSegment(s, seg.endSec)
+        val c = cur
+        cur = when {
+            c == null -> piece
+            piece.startSec - c.endSec <= gapSec && piece.endSec - c.startSec <= maxSec -> SpeechSegment(c.startSec, piece.endSec)
+            else -> { out += c; piece }
+        }
+    }
+    cur?.let { out += it }
+    return out
 }
 
 /**

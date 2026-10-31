@@ -5,7 +5,15 @@ import android.content.Intent
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.core.content.FileProvider
+import com.polylingua.edge.ai.AiCoach
+import com.polylingua.edge.ai.ProviderHealth
 import com.polylingua.edge.core.AccentPreference
+import com.polylingua.edge.core.AiProviderKind
+import com.polylingua.edge.core.DiagLog
+import com.polylingua.edge.core.NativeLoadGuard
+import com.polylingua.edge.core.SecureKeyStore
+import com.polylingua.edge.core.UserNotices
 import com.polylingua.edge.core.AppSettings
 import com.polylingua.edge.core.CoreExecutors
 import com.polylingua.edge.core.MiuiCompat
@@ -31,12 +39,15 @@ import com.polylingua.edge.speech.SpeechRecognitionEngine
 import com.polylingua.edge.speech.SpeechSynthesisEngine
 import com.polylingua.edge.speech.StorageRoot
 import com.polylingua.edge.speech.SynthVoice
+import com.polylingua.edge.speech.SystemTtsInfo
+import com.polylingua.edge.speech.VoiceHealth
 import com.polylingua.edge.ui.DashboardPayload
 import com.polylingua.edge.ui.DiagnosticSessionStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -189,14 +200,24 @@ class HomeViewModel @Inject constructor(
 
 @HiltViewModel
 class SetupViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val models: ModelManager,
     val settings: AppSettings,
     private val tts: SpeechSynthesisEngine,
     private val llm: LocalLlmEngine,
+    private val ai: AiCoach,
+    private val keys: SecureKeyStore,
+    private val asr: SpeechRecognitionEngine,
+    private val guard: NativeLoadGuard,
 ) : ViewModel() {
     val statuses: StateFlow<Map<String, PackStatus>> = models.statuses
     val llmState: StateFlow<LlmState> = llm.state
     val userSettings: StateFlow<UserSettings> = settings.settings
+    val voiceHealth: StateFlow<Map<String, VoiceHealth>> = tts.health
+    val systemTts: StateFlow<SystemTtsInfo> = tts.systemInfo
+    val aiHealth: StateFlow<Map<AiProviderKind, ProviderHealth>> = ai.health
+    val keyRevision: StateFlow<Int> = keys.revision
+    val diagLines: StateFlow<Int> = DiagLog.count
 
     private val _roots = MutableStateFlow<List<StorageRoot>>(emptyList())
     val roots: StateFlow<List<StorageRoot>> = _roots
@@ -204,15 +225,38 @@ class SetupViewModel @Inject constructor(
     private val _voices = MutableStateFlow<List<SynthVoice>>(emptyList())
     val voices: StateFlow<List<SynthVoice>> = _voices
 
+    private val _missingVoices = MutableStateFlow<List<SynthVoice>>(emptyList())
+    val missingVoices: StateFlow<List<SynthVoice>> = _missingVoices
+
+    private val _busy = MutableStateFlow<String?>(null)
+    /** Label of a running test ("Testing voices 3/24", "Testing Gemini…"), null when idle. */
+    val busy: StateFlow<String?> = _busy
+
     init {
         refresh()
+        viewModelScope.launch {
+            runCatching { tts.refreshSystemVoices() }
+            refreshVoices()
+        }
+        // Newly installed / removed packs change the voice list immediately.
+        viewModelScope.launch {
+            models.statuses
+                .map { m -> m.filterValues { it is PackStatus.Installed }.keys }
+                .distinctUntilChanged()
+                .collect { refreshVoices() }
+        }
+    }
+
+    private fun refreshVoices() {
+        _voices.value = tts.availableVoices()
+        _missingVoices.value = tts.unavailableLocaleVoices()
     }
 
     fun refresh(rescan: Boolean = true) {
         viewModelScope.launch(CoreExecutors.dsp) {
             if (rescan) models.rescan()
             _roots.value = models.storageRoots()
-            _voices.value = tts.availableVoices()
+            refreshVoices()
         }
     }
 
@@ -222,6 +266,8 @@ class SetupViewModel @Inject constructor(
     fun delete(pack: ModelPack) {
         viewModelScope.launch {
             if (pack.kind == com.polylingua.edge.speech.ModelKind.LLM) llm.releaseForMemory()
+            if (pack.kind == com.polylingua.edge.speech.ModelKind.ASR_STREAMING || pack.kind == com.polylingua.edge.speech.ModelKind.ASR_SECOND_PASS) asr.releaseForMemory()
+            if (pack.kind == com.polylingua.edge.speech.ModelKind.TTS) tts.releaseForMemory()
             models.delete(pack)
             refresh()
         }
@@ -236,13 +282,117 @@ class SetupViewModel @Inject constructor(
     fun setStorage(s: ModelStorage) = update { it.copy(modelStorage = s) }
     fun setAccent(a: AccentPreference) = update { it.copy(accent = a) }
 
+    // ------------------------------------------------------------------- voices
+
     fun previewVoice(v: SynthVoice) {
         viewModelScope.launch {
             tts.speak("Hello! This is how I sound when I read your IELTS model answers.", v, label = v.label)
         }
     }
 
+    fun testAllVoices() {
+        if (_busy.value != null) return
+        viewModelScope.launch {
+            _busy.value = "Testing voices…"
+            tts.testAll { i, n -> _busy.value = "Testing voices ${minOf(i + 1, n)}/$n…" }
+            refreshVoices()
+            _busy.value = null
+            val failed = tts.health.value.count { it.value is VoiceHealth.Failed }
+            UserNotices.post(if (failed == 0) "All voices work ✓" else "$failed voice(s) failed - see the red marks.", if (failed == 0) UserNotices.Kind.SUCCESS else UserNotices.Kind.WARNING)
+        }
+    }
+
+    private fun launchIntent(vararg intents: Intent): Boolean {
+        for (i in intents) {
+            try {
+                context.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                return true
+            } catch (_: Exception) {
+            }
+        }
+        return false
+    }
+
+    fun openTtsSettings() {
+        if (!launchIntent(Intent("com.android.settings.TTS_SETTINGS"), Intent(android.provider.Settings.ACTION_SETTINGS))) {
+            UserNotices.post("Open Android Settings → Accessibility → Text-to-speech output.")
+        }
+    }
+
+    fun installVoiceData() {
+        val engine = tts.systemInfo.value.enginePackage
+        val install = Intent(android.speech.tts.TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA)
+        if (!launchIntent(if (engine.isNotBlank()) Intent(install).setPackage(engine) else install, install, Intent("com.android.settings.TTS_SETTINGS"))) {
+            UserNotices.post("Your text-to-speech engine has no voice-data installer. Install \"Speech Services by Google\" from the Play Store.")
+        }
+    }
+
+    fun getGoogleTts() {
+        launchIntent(
+            Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.google.android.tts")),
+            Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.tts")),
+        )
+    }
+
     fun loadLlm() {
         viewModelScope.launch { llm.ensureLoaded() }
     }
+
+    // --------------------------------------------------------------- AI provider
+
+    fun hasKey(slot: SecureKeyStore.Slot): Boolean = keys.has(slot)
+    fun maskedKey(slot: SecureKeyStore.Slot): String = keys.masked(slot)
+
+    fun saveKey(slot: SecureKeyStore.Slot, value: String) {
+        keys.put(slot, value)
+        UserNotices.post(if (value.isBlank()) "${slot.label} removed." else "${slot.label} saved (encrypted on this phone).", UserNotices.Kind.SUCCESS)
+    }
+
+    fun setProvider(kind: AiProviderKind) = update { it.copy(aiProvider = kind) }
+
+    fun testProvider(kind: AiProviderKind) {
+        if (_busy.value != null) return
+        viewModelScope.launch {
+            _busy.value = "Testing ${kind.label}…"
+            val h = ai.test(kind)
+            _busy.value = null
+            UserNotices.post((if (h.ok) "✓ " else "✗ ") + h.message, if (h.ok) UserNotices.Kind.SUCCESS else UserNotices.Kind.ERROR)
+        }
+    }
+
+    fun openUrl(url: String) {
+        launchIntent(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+    }
+
+    // ------------------------------------------------------------- recognition
+
+    fun asrSummary(): String = asr.engineSummary()
+    fun blockedModels(): Set<String> = guard.blocked
+    fun unblock(id: String) {
+        guard.unblock(id)
+        UserNotices.post("$id re-enabled. If it crashes again it will be disabled automatically.")
+    }
+
+    // ------------------------------------------------------------- diagnostics
+
+    fun shareDiagnostics() {
+        val s = settings.settings.value
+        val header = "Live ASR: ${asr.livePack()?.id ?: "none"} · final: ${asr.secondPassPack()?.id ?: "none"} (${s.finalAsrPackId.ifBlank { "auto" }}) · " +
+            "AI: ${s.aiProvider} · TTS engine: ${tts.systemInfo.value.engineLabel} · blocked: ${guard.blocked}"
+        val file = DiagLog.export(context, header)
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        val send = Intent(Intent.ACTION_SEND).setType("text/plain")
+            .putExtra(Intent.EXTRA_STREAM, uri)
+            .putExtra(Intent.EXTRA_SUBJECT, "PolyLingua Edge diagnostics")
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        launchIntent(Intent.createChooser(send, "Share diagnostics"))
+    }
+
+    fun copyDiagnostics() {
+        val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        cm.setPrimaryClip(android.content.ClipData.newPlainText("PolyLingua diagnostics", DiagLog.snapshot().takeLast(60_000)))
+        UserNotices.post("Diagnostics copied to the clipboard.")
+    }
+
+    fun clearDiagnostics() = DiagLog.clear()
 }

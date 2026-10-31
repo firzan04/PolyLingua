@@ -56,6 +56,9 @@ class SpeakingCaptureController @Inject constructor(
     ) {
         private val _live = MutableStateFlow(LiveCaptureState(backend = asr.backend()))
         val live: StateFlow<LiveCaptureState> = _live
+
+        /** Utterances closed by trailing silence (only when started with conversation = true). */
+        val utterances: kotlinx.coroutines.flow.SharedFlow<String> get() = session.utterances
         private val pitchEngine = TarsosPitchAndProsodyEngine()
         private val rawPitch = ArrayList<PitchFrame>(8000)
         private val startNs = System.nanoTime()
@@ -124,19 +127,31 @@ class SpeakingCaptureController @Inject constructor(
 
     val backend: AsrBackend get() = asr.backend()
 
+    /** Final-transcript progress ("Polishing the transcript with Parakeet · 2/3"). */
+    val finalizing: StateFlow<String?> get() = asr.finalizing
+
+    /** Human-readable description of the recognisers in use. */
+    fun engineSummary(): String = asr.engineSummary()
+
+    /** Loads the recognisers ahead of time (call when a practice screen opens). */
+    suspend fun preload() {
+        if (asr.backend() == AsrBackend.SHERPA_OFFLINE) runCatching { asr.prepare() }
+    }
+
     /**
      * Starts a capture. Returns null when no recogniser is available or the microphone failed.
      * [detail] is shown in the foreground-service notification.
      */
-    suspend fun begin(scope: CoroutineScope, detail: String, conversation: Boolean = false): ActiveCapture? {
+    suspend fun begin(scope: CoroutineScope, detail: String, conversation: Boolean = false, hint: String = detail): ActiveCapture? {
         val s = settings.settings.value
         if (asr.backend() == AsrBackend.SHERPA_OFFLINE) {
             // Load the models before opening the mic so the first words are not lost.
             asr.prepare()
+            recorder.autoGain = s.micAutoGain
             if (!recorder.start(s.sidetoneEnabled, s.sidetoneGain)) return null
         }
         PolyLinguaForegroundService.acquire(context, PolyLinguaForegroundService.Reason.RECORDING, detail)
-        val session = asr.startSession(scope, conversation)
+        val session = asr.startSession(scope, conversation, hint)
         if (session == null) {
             recorder.stop()
             PolyLinguaForegroundService.release(context, PolyLinguaForegroundService.Reason.RECORDING)

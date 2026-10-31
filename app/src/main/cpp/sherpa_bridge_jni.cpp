@@ -58,7 +58,8 @@ JNIEXPORT jlong JNICALL
 Java_com_polylingua_edge_nativebridge_SherpaNative_nativeCreateOnlineRecognizer(
         JNIEnv* env, jobject, jstring jEncoder, jstring jDecoder, jstring jJoiner, jstring jTokens,
         jint numThreads, jstring jDecodingMethod, jboolean enableEndpoint, jfloat rule1,
-        jfloat rule2, jfloat rule3) {
+        jfloat rule2, jfloat rule3, jstring jModelType) {
+    std::string modelType = JStringToStd(env, jModelType);
     std::string encoder = JStringToStd(env, jEncoder);
     std::string decoder = JStringToStd(env, jDecoder);
     std::string joiner = JStringToStd(env, jJoiner);
@@ -77,6 +78,9 @@ Java_com_polylingua_edge_nativebridge_SherpaNative_nativeCreateOnlineRecognizer(
     config.model_config.num_threads = numThreads > 0 ? numThreads : 2;
     config.model_config.provider = "cpu";
     config.model_config.debug = 0;
+    // "" lets sherpa-onnx detect the architecture from model metadata (zipformer, NeMo
+    // FastConformer, Nemotron); "zipformer2" is required for some community exports.
+    if (!modelType.empty()) config.model_config.model_type = modelType.c_str();
     config.decoding_method = method.c_str();
     config.max_active_paths = 4;
     config.enable_endpoint = enableEndpoint ? 1 : 0;
@@ -262,6 +266,24 @@ Java_com_polylingua_edge_nativebridge_SherpaNative_nativeCreateOfflineRecognizer
         config.model_config.moonshine.encoder = p2.c_str();
         config.model_config.moonshine.uncached_decoder = p3.c_str();
         config.model_config.moonshine.cached_decoder = p4.c_str();
+    } else if (kind == "moonshine2") {
+        // Moonshine v2 exports: encoder + merged decoder (.ort)
+        config.model_config.moonshine.encoder = p1.c_str();
+        config.model_config.moonshine.merged_decoder = p2.c_str();
+    } else if (kind == "nemo_transducer") {
+        // NVIDIA Parakeet TDT / NeMo RNN-T: encoder, decoder (prediction net), joiner
+        config.model_config.transducer.encoder = p1.c_str();
+        config.model_config.transducer.decoder = p2.c_str();
+        config.model_config.transducer.joiner = p3.c_str();
+        config.model_config.model_type = "nemo_transducer";
+    } else if (kind == "nemo_ctc") {
+        // NeMo FastConformer CTC (e.g. Parakeet TDT-CTC 110M exported as CTC)
+        config.model_config.nemo_ctc.model = p1.c_str();
+    } else if (kind == "transducer") {
+        // Zipformer offline transducer
+        config.model_config.transducer.encoder = p1.c_str();
+        config.model_config.transducer.decoder = p2.c_str();
+        config.model_config.transducer.joiner = p3.c_str();
     } else if (kind == "whisper") {
         config.model_config.whisper.encoder = p1.c_str();
         config.model_config.whisper.decoder = p2.c_str();

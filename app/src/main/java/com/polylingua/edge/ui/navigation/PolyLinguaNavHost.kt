@@ -19,11 +19,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -37,6 +43,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import kotlinx.coroutines.flow.collectLatest
+import com.polylingua.edge.core.UserNotices
 import com.polylingua.edge.ui.PendingRoute
 import com.polylingua.edge.ui.TelemetryViewModel
 import com.polylingua.edge.ui.components.PillBadge
@@ -77,10 +85,33 @@ fun PolyLinguaRoot(nav: NavHostController = rememberNavController()) {
         PendingRoute.route.value = null
         if (PendingRoute.isValid(r)) runCatching { nav.navigate(r) }
     }
-    Column(Modifier.fillMaxSize().background(PolyColors.AmazeVoidBlack).systemBarsPadding()) {
-        TelemetryTopBar()
-        Box(Modifier.weight(1f)) {
-            PolyLinguaNavHost(nav)
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(Unit) {
+        // collectLatest: a newer notice replaces the one on screen instead of queueing behind it.
+        UserNotices.flow.collectLatest { n ->
+            snackbar.currentSnackbarData?.dismiss()
+            snackbar.showSnackbar(
+                n.text,
+                withDismissAction = true,
+                duration = if (n.kind == UserNotices.Kind.ERROR || n.text.length > 90) SnackbarDuration.Long else SnackbarDuration.Short,
+            )
+        }
+    }
+    Box(Modifier.fillMaxSize().background(PolyColors.AmazeVoidBlack)) {
+        Column(Modifier.fillMaxSize().systemBarsPadding()) {
+            TelemetryTopBar()
+            Box(Modifier.weight(1f)) {
+                PolyLinguaNavHost(nav)
+            }
+        }
+        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(12.dp)) { data ->
+            Snackbar(
+                data,
+                containerColor = PolyColors.ObsidianSlateHigh,
+                contentColor = PolyColors.PureIceWhite,
+                actionColor = PolyColors.ElectricTeal,
+                dismissActionContentColor = PolyColors.MutedSlateText,
+            )
         }
     }
 }
@@ -129,6 +160,7 @@ fun TelemetryTopBar(vm: TelemetryViewModel = hiltViewModel()) {
     val snap by vm.snapshot.collectAsStateWithLifecycle()
     val net by vm.network.collectAsStateWithLifecycle()
     val route by vm.route.collectAsStateWithLifecycle()
+    val voice by vm.synthesizing.collectAsStateWithLifecycle()
     Column(Modifier.fillMaxWidth().background(PolyColors.AmazeVoidBlack).padding(horizontal = 14.dp, vertical = 6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(PolyIcons.Waveform, null, tint = PolyColors.ElectricTeal, modifier = Modifier.size(18.dp))
@@ -148,6 +180,7 @@ fun TelemetryTopBar(vm: TelemetryViewModel = hiltViewModel()) {
             PillBadge("CPU ${snap.appCpuPercent}% · RAM ${snap.appRssMb} MB", cpuColor)
             PillBadge(net.pill, if (net.online) PolyColors.NeonMintSuccess else PolyColors.AmberWarning, filled = true)
             PillBadge(route.route.badge, if (route.route.isHeadset) PolyColors.NeonMintSuccess else PolyColors.ElectricTeal)
+            if (voice != null) PillBadge("🔊 PREPARING VOICE", PolyColors.AmberWarning)
             if (snap.lowMemory) PillBadge("LOW MEMORY", PolyColors.CrimsonAlert, filled = true)
         }
     }

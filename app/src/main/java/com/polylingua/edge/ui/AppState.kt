@@ -59,8 +59,11 @@ class TelemetryViewModel @Inject constructor(
     private val telemetry: DeviceTelemetry,
     network: ConnectivityAndWebRtcManager,
     routes: AudioRouteMonitor,
+    tts: com.polylingua.edge.speech.SpeechSynthesisEngine,
 ) : ViewModel() {
     val snapshot: StateFlow<TelemetrySnapshot> = telemetry.snapshot
+    /** Non-null while a voice is being synthesised (first use of a neural voice takes a moment). */
+    val synthesizing: StateFlow<String?> = tts.synthesizing
     val network: StateFlow<NetworkStatus> = network.network
     val route: StateFlow<RouteInfo> = routes.route
 

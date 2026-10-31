@@ -74,6 +74,7 @@ object SherpaNative {
     external fun nativeCreateOnlineRecognizer(
         encoder: String, decoder: String, joiner: String, tokens: String, numThreads: Int,
         decodingMethod: String, enableEndpoint: Boolean, rule1: Float, rule2: Float, rule3: Float,
+        modelType: String,
     ): Long
 
     external fun nativeDestroyOnlineRecognizer(handle: Long)
@@ -105,6 +106,7 @@ object SherpaNative {
 
     // Offline second-pass ASR: kind = "moonshine" (p1..p4 = preprocess, encode, uncached, cached)
     // or "whisper" (p1 = encoder, p2 = decoder).
+    /** kind: moonshine | moonshine2 | nemo_transducer | nemo_ctc | transducer | whisper */
     external fun nativeCreateOfflineRecognizer(
         kind: String, p1: String, p2: String, p3: String, p4: String, tokens: String, numThreads: Int,
     ): Long

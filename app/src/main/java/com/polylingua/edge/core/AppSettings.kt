@@ -26,6 +26,18 @@ private val Context.settingsStore: DataStore<Preferences> by preferencesDataStor
 
 enum class ModelStorage { INTERNAL, SD_CARD }
 
+/** Which language model powers persona chat, corrections and the examiner review. */
+enum class AiProviderKind(val label: String, val cloud: Boolean) {
+    ON_DEVICE("On-device (Qwen / SmolLM, offline)", false),
+    GEMINI("Google Gemini (API key)", true),
+    CLAUDE("Anthropic Claude (API key)", true),
+    OPENAI_COMPAT("OpenAI-compatible endpoint", true);
+
+    companion object {
+        fun parse(s: String?): AiProviderKind = entries.firstOrNull { it.name == s } ?: ON_DEVICE
+    }
+}
+
 enum class AccentPreference(val label: String, val localeTag: String) {
     BRITISH_RP("British RP", "en-GB"),
     AMERICAN_GA("General American", "en-US"),
@@ -54,8 +66,29 @@ data class UserSettings(
     val displayName: String = "",
     val onboardingDone: Boolean = false,
     val cellularDownloadsAllowed: Boolean = false,
+    /** Live-caption recogniser pack id ("" = most accurate installed). */
+    val liveAsrPackId: String = "",
+    /** Final-transcript engine: "" auto, a pack id, [FINAL_ASR_OFF] or [FINAL_ASR_GEMINI]. */
+    val finalAsrPackId: String = "",
+    /** Silence (s) that ends your turn in conversations with AI partners. */
+    val turnEndSilenceSec: Float = 1.8f,
+    /** Software level normalisation (gain + 70 Hz high-pass) on the microphone signal. */
+    val micAutoGain: Boolean = true,
+    val aiProvider: AiProviderKind = AiProviderKind.ON_DEVICE,
+    val geminiModel: String = DEFAULT_GEMINI_MODEL,
+    val claudeModel: String = DEFAULT_CLAUDE_MODEL,
+    val openAiBaseUrl: String = "",
+    val openAiModel: String = "",
+    /** Fall back to the on-device model when the cloud provider is unreachable. */
+    val aiOfflineFallback: Boolean = true,
+    /** Default for the arena's "Video interview" switch (front camera + body-language report). */
+    val videoInterview: Boolean = false,
 ) {
     companion object {
+        const val DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"
+        const val DEFAULT_CLAUDE_MODEL = "claude-haiku-5-5"
+        const val FINAL_ASR_OFF = "off"
+        const val FINAL_ASR_GEMINI = "gemini"
         /** Public MQTT-over-WebSocket broker used as the default WebRTC signalling relay. */
         const val DEFAULT_SIGNALING_URL = "wss://broker.emqx.io:8084/mqtt"
         const val DEFAULT_STUN_URL = "stun:stun.l.google.com:19302"
@@ -84,6 +117,17 @@ class AppSettings @Inject constructor(@ApplicationContext private val context: C
         val displayName = stringPreferencesKey("display_name")
         val onboarding = booleanPreferencesKey("onboarding_done")
         val cellular = booleanPreferencesKey("cellular_downloads")
+        val liveAsr = stringPreferencesKey("live_asr_pack")
+        val finalAsr = stringPreferencesKey("final_asr_pack")
+        val turnEnd = floatPreferencesKey("turn_end_silence")
+        val micAgc = booleanPreferencesKey("mic_auto_gain")
+        val aiProvider = stringPreferencesKey("ai_provider")
+        val geminiModel = stringPreferencesKey("gemini_model")
+        val claudeModel = stringPreferencesKey("claude_model")
+        val openAiBase = stringPreferencesKey("openai_base_url")
+        val openAiModel = stringPreferencesKey("openai_model")
+        val aiFallback = booleanPreferencesKey("ai_offline_fallback")
+        val videoInterview = booleanPreferencesKey("video_interview")
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -108,6 +152,17 @@ class AppSettings @Inject constructor(@ApplicationContext private val context: C
             displayName = this[Keys.displayName] ?: d.displayName,
             onboardingDone = this[Keys.onboarding] ?: d.onboardingDone,
             cellularDownloadsAllowed = this[Keys.cellular] ?: d.cellularDownloadsAllowed,
+            liveAsrPackId = this[Keys.liveAsr] ?: d.liveAsrPackId,
+            finalAsrPackId = this[Keys.finalAsr] ?: d.finalAsrPackId,
+            turnEndSilenceSec = (this[Keys.turnEnd] ?: d.turnEndSilenceSec).coerceIn(0.8f, 4f),
+            micAutoGain = this[Keys.micAgc] ?: d.micAutoGain,
+            aiProvider = AiProviderKind.parse(this[Keys.aiProvider]),
+            geminiModel = this[Keys.geminiModel]?.takeIf { it.isNotBlank() } ?: d.geminiModel,
+            claudeModel = this[Keys.claudeModel]?.takeIf { it.isNotBlank() } ?: d.claudeModel,
+            openAiBaseUrl = this[Keys.openAiBase] ?: d.openAiBaseUrl,
+            openAiModel = this[Keys.openAiModel] ?: d.openAiModel,
+            aiOfflineFallback = this[Keys.aiFallback] ?: d.aiOfflineFallback,
+            videoInterview = this[Keys.videoInterview] ?: d.videoInterview,
         )
     }
 
@@ -137,6 +192,17 @@ class AppSettings @Inject constructor(@ApplicationContext private val context: C
             prefs[Keys.displayName] = next.displayName
             prefs[Keys.onboarding] = next.onboardingDone
             prefs[Keys.cellular] = next.cellularDownloadsAllowed
+            prefs[Keys.liveAsr] = next.liveAsrPackId
+            prefs[Keys.finalAsr] = next.finalAsrPackId
+            prefs[Keys.turnEnd] = next.turnEndSilenceSec
+            prefs[Keys.micAgc] = next.micAutoGain
+            prefs[Keys.aiProvider] = next.aiProvider.name
+            prefs[Keys.geminiModel] = next.geminiModel
+            prefs[Keys.claudeModel] = next.claudeModel
+            prefs[Keys.openAiBase] = next.openAiBaseUrl
+            prefs[Keys.openAiModel] = next.openAiModel
+            prefs[Keys.aiFallback] = next.aiOfflineFallback
+            prefs[Keys.videoInterview] = next.videoInterview
         }
     }
 }

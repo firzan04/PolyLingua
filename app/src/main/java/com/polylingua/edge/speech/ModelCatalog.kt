@@ -12,6 +12,22 @@ enum class ModelKind(val title: String) {
 }
 
 /**
+ * How a speech-recognition pack is loaded by the native bridge.
+ * [kind]: streaming "transducer"; offline "nemo_transducer" | "nemo_ctc" | "moonshine".
+ * [files] are the model files in loader order (encoder, decoder, joiner) or the single model.
+ * [rank]: higher = more accurate; "Auto" picks the highest-ranked installed pack.
+ */
+data class AsrSpec(
+    val kind: String,
+    val files: List<String>,
+    val tokens: String = "tokens.txt",
+    val modelType: String = "",
+    val threads: Int = 1,
+    val rank: Int,
+    val engineTag: String,
+)
+
+/**
  * One downloadable model pack. Archives (.tar.bz2) are streamed through a filter that keeps only
  * [requiredFiles] (matched by path relative to the archive's top-level folder) plus any directory
  * listed in [keepDirs]; single-file packs are stored as `requiredFiles[0]`.
@@ -31,6 +47,7 @@ data class ModelPack(
     /** Approximate resident memory once loaded, for the 1.8 GB residency budget. */
     val residentMb: Int,
     val fallbackUrls: List<String> = emptyList(),
+    val asr: AsrSpec? = null,
 ) {
     val sizeMb: Int get() = ((sizeBytes + 524_288) / 1_048_576).toInt()
 }
@@ -76,10 +93,51 @@ object ModelCatalog {
             "joiner-epoch-99-avg-1.int8.onnx",
             "tokens.txt",
         ),
-        description = "Real-time captions with word timestamps for WPM, pauses and run length. ~45 MB on disk after extraction.",
+        description = "Lite live captions (20 M parameters). Fast but noticeably less accurate than NeMo FastConformer - keep only for very low memory.",
         license = "Apache-2.0 (k2-fsa/icefall)",
-        recommended = true,
         residentMb = 90,
+        asr = AsrSpec(
+            kind = "transducer",
+            files = listOf("encoder-epoch-99-avg-1.int8.onnx", "decoder-epoch-99-avg-1.onnx", "joiner-epoch-99-avg-1.int8.onnx"),
+            rank = 1, engineTag = "zipformer-20m",
+        ),
+    )
+
+    val ASR_NEMO_STREAMING = ModelPack(
+        id = "asr-nemo-fastconformer-480ms",
+        title = "NeMo FastConformer streaming EN (480 ms, int8)",
+        kind = ModelKind.ASR_STREAMING,
+        url = "$SHERPA/asr-models/sherpa-onnx-nemo-streaming-fast-conformer-transducer-en-480ms-int8.tar.bz2",
+        sizeBytes = 105_913_204,
+        archive = true,
+        requiredFiles = listOf("encoder.int8.onnx", "decoder.int8.onnx", "joiner.int8.onnx", "tokens.txt"),
+        description = "Accurate live captions (114 M parameters, trained on thousands of hours of varied English incl. accented speech). Replaces the 20 M Zipformer.",
+        license = "CC-BY-4.0 (NVIDIA NeMo)",
+        recommended = true,
+        residentMb = 210,
+        asr = AsrSpec(
+            kind = "transducer",
+            files = listOf("encoder.int8.onnx", "decoder.int8.onnx", "joiner.int8.onnx"),
+            rank = 3, engineTag = "nemo-fc-480ms",
+        ),
+    )
+
+    val ASR_NEMOTRON = ModelPack(
+        id = "asr-nemotron-streaming-0.6b",
+        title = "Nemotron Speech Streaming EN 0.6B (int8) · experimental",
+        kind = ModelKind.ASR_STREAMING,
+        url = "$SHERPA/asr-models/sherpa-onnx-nemotron-speech-streaming-en-0.6b-int8-2026-01-14.tar.bz2",
+        sizeBytes = 468_994_262,
+        archive = true,
+        requiredFiles = listOf("encoder.int8.onnx", "decoder.int8.onnx", "joiner.int8.onnx", "tokens.txt"),
+        description = "Highest-accuracy live captions with punctuation. Heavy: uses both big cores; if captions lag on your phone, switch Live captions back to NeMo FastConformer.",
+        license = "NVIDIA Open Model License",
+        residentMb = 760,
+        asr = AsrSpec(
+            kind = "transducer",
+            files = listOf("encoder.int8.onnx", "decoder.int8.onnx", "joiner.int8.onnx"),
+            threads = 2, rank = 4, engineTag = "nemotron-0.6b",
+        ),
     )
 
     val ASR_MOONSHINE = ModelPack(
@@ -92,9 +150,47 @@ object ModelCatalog {
         requiredFiles = listOf(
             "preprocess.onnx", "encode.int8.onnx", "uncached_decode.int8.onnx", "cached_decode.int8.onnx", "tokens.txt",
         ),
-        description = "Second pass over each utterance for a cleaner transcript before grammar and vocabulary scoring.",
+        description = "Small second pass over each utterance. Superseded by Parakeet; keep only if storage is tight.",
         license = "MIT (Useful Sensors)",
         residentMb = 160,
+        asr = AsrSpec(
+            kind = "moonshine",
+            files = listOf("preprocess.onnx", "encode.int8.onnx", "uncached_decode.int8.onnx", "cached_decode.int8.onnx"),
+            rank = 1, engineTag = "moonshine-tiny",
+        ),
+    )
+
+    val ASR_PARAKEET_110M = ModelPack(
+        id = "asr-parakeet-tdt-ctc-110m",
+        title = "Parakeet TDT-CTC 110M EN (int8)",
+        kind = ModelKind.ASR_SECOND_PASS,
+        url = "$SHERPA/asr-models/sherpa-onnx-nemo-parakeet_tdt_ctc_110m-en-36000-int8.tar.bz2",
+        sizeBytes = 104_337_827,
+        archive = true,
+        requiredFiles = listOf("model.int8.onnx", "tokens.txt"),
+        description = "Fast, accurate final transcript of every answer (NVIDIA Parakeet). Used for grammar, vocabulary and coherence scoring.",
+        license = "CC-BY-4.0 (NVIDIA)",
+        recommended = true,
+        residentMb = 220,
+        asr = AsrSpec(kind = "nemo_ctc", files = listOf("model.int8.onnx"), threads = 2, rank = 2, engineTag = "parakeet-110m"),
+    )
+
+    val ASR_PARAKEET_06B = ModelPack(
+        id = "asr-parakeet-tdt-0.6b-v2",
+        title = "Parakeet TDT 0.6B v2 EN (int8) · max accuracy",
+        kind = ModelKind.ASR_SECOND_PASS,
+        url = "$SHERPA/asr-models/sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8.tar.bz2",
+        sizeBytes = 482_468_385,
+        archive = true,
+        requiredFiles = listOf("encoder.int8.onnx", "decoder.int8.onnx", "joiner.int8.onnx", "tokens.txt"),
+        description = "Most accurate offline English transcript (top of the open ASR leaderboards), with punctuation and casing. Slower: adds several seconds after each answer.",
+        license = "CC-BY-4.0 (NVIDIA)",
+        residentMb = 820,
+        asr = AsrSpec(
+            kind = "nemo_transducer",
+            files = listOf("encoder.int8.onnx", "decoder.int8.onnx", "joiner.int8.onnx"),
+            threads = 2, rank = 3, engineTag = "parakeet-0.6b",
+        ),
     )
 
     val PUNCTUATION = ModelPack(
@@ -212,14 +308,23 @@ object ModelCatalog {
     )
 
     val ALL: List<ModelPack> = listOf(
-        VAD_SILERO, ASR_ZIPFORMER, PUNCTUATION, GOP_CHARSIU, TTS_KOKORO, TTS_KITTEN, TTS_PIPER_ALAN, TTS_PIPER_LESSAC,
-        ASR_MOONSHINE, LLM_QWEN, LLM_SMOL,
+        VAD_SILERO, ASR_NEMO_STREAMING, ASR_NEMOTRON, ASR_ZIPFORMER, PUNCTUATION, GOP_CHARSIU,
+        TTS_KOKORO, TTS_KITTEN, TTS_PIPER_ALAN, TTS_PIPER_LESSAC,
+        ASR_PARAKEET_110M, ASR_PARAKEET_06B, ASR_MOONSHINE, LLM_QWEN, LLM_SMOL,
     )
 
     fun byId(id: String): ModelPack? = ALL.firstOrNull { it.id == id }
 
-    /** The essential offline speaking-assessment bundle (~435 MB download). */
-    val ESSENTIALS: List<ModelPack> = listOf(VAD_SILERO, ASR_ZIPFORMER, PUNCTUATION, GOP_CHARSIU, TTS_KOKORO)
+    /** Live-caption recognisers, most accurate first. */
+    val STREAMING_ASR: List<ModelPack> = listOf(ASR_NEMOTRON, ASR_NEMO_STREAMING, ASR_ZIPFORMER)
+
+    /** Final-transcript (second pass) recognisers, most accurate first. */
+    val SECOND_PASS_ASR: List<ModelPack> = listOf(ASR_PARAKEET_06B, ASR_PARAKEET_110M, ASR_MOONSHINE)
+
+    /** The essential offline speaking-assessment bundle (~470 MB download). */
+    val ESSENTIALS: List<ModelPack> = listOf(VAD_SILERO, ASR_NEMO_STREAMING, PUNCTUATION, ASR_PARAKEET_110M, GOP_CHARSIU, TTS_KOKORO)
+
+    val ESSENTIALS_MB: Int get() = ESSENTIALS.sumOf { it.sizeMb }
 
     /** Kokoro v0.19 speaker table (sid order of voices.bin). */
     val KOKORO_VOICES: List<NeuralVoice> = listOf(

@@ -54,7 +54,7 @@ data class ShadowingOutcome(
 class AssessmentPipeline @Inject constructor(
     private val resources: LinguisticResources,
     private val pronunciation: PronunciationEngine,
-    private val llm: LocalLlmEngine,
+    private val llm: com.polylingua.edge.ai.AiCoach,
 ) {
 
     suspend fun assessSpeaking(
@@ -96,7 +96,7 @@ class AssessmentPipeline @Inject constructor(
      * Offline-LLM grammar review of up to [maxSentences] sentences (longest first). Each returned
      * issue spans the sentence in the transcript and carries the corrected version.
      */
-    suspend fun deepGrammarCheck(transcript: String, level: String, maxSentences: Int = 3, onProgress: (Int, Int) -> Unit = { _, _ -> }): List<GrammarIssue> {
+    suspend fun deepGrammarCheck(transcript: String, level: String, maxSentences: Int = if (llm.isCloudActive) 10 else 3, onProgress: (Int, Int) -> Unit = { _, _ -> }): List<GrammarIssue> {
         if (!llm.isAvailable) return emptyList()
         val sentences = TextAnalysis.sentences(transcript)
             .filter { TextAnalysis.words(it.text).size >= 5 }

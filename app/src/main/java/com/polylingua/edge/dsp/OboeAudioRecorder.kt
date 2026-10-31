@@ -128,8 +128,11 @@ data class CaptureState(
  *  - Headset routes: Oboe low-latency full-duplex engine (oboe_sidetone_engine.cpp) - the
  *    learner hears their own voice in real time (sidetone) while the same samples are
  *    decimated to 16 kHz for analysis.
- *  - Speaker route: AudioRecord(VOICE_COMMUNICATION) with AcousticEchoCanceler, NoiseSuppressor
- *    and AutomaticGainControl so model playback does not leak into the recording.
+ *  - Speaker route: AudioRecord(VOICE_RECOGNITION) - the flat, unprocessed path Android reserves
+ *    for speech recognisers - followed by [SpeechLevelNormalizer] (70 Hz high-pass + speech-gated
+ *    gain). VOICE_COMMUNICATION with AEC/NS/AGC is used only when [start] is asked for echo
+ *    cancellation (hands-free conversation while a voice may be playing), because the telephony
+ *    noise suppressor smears consonants and measurably lowers recognition accuracy.
  *
  * The capture loop runs on a dedicated thread pinned to the Cortex-A55 cluster.
  */
@@ -166,6 +169,11 @@ class OboeAudioRecorder @Inject constructor(
     private val effects = ArrayList<AudioEffect>(3)
     private var recording: PcmUtils.PcmAccumulator? = null
 
+    /** Applies [SpeechLevelNormalizer] to captured audio (set before [start]). */
+    @Volatile var autoGain: Boolean = true
+    private val normalizer = SpeechLevelNormalizer(SAMPLE_RATE)
+    @Volatile private var echoCancel = false
+
     val isRunning: Boolean get() = running.get()
 
     fun hasPermission(): Boolean =
@@ -176,11 +184,13 @@ class OboeAudioRecorder @Inject constructor(
      * Returns false if the microphone could not be opened.
      */
     @Synchronized
-    fun start(sidetone: Boolean = true, sidetoneGain: Float = 0.85f): Boolean {
+    fun start(sidetone: Boolean = true, sidetoneGain: Float = 0.85f, echoCancellation: Boolean = false): Boolean {
         if (running.get()) {
             setSidetone(sidetone, sidetoneGain)
             return true
         }
+        echoCancel = echoCancellation
+        synchronized(deliverLock) { normalizer.reset() }
         if (!hasPermission()) {
             _state.value = CaptureState(error = "Microphone permission not granted")
             return false
@@ -305,7 +315,8 @@ class OboeAudioRecorder @Inject constructor(
         val speaker = !route.route.isHeadset
         val minBuf = AudioRecord.getMinBufferSize(SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
         val bufBytes = max(minBuf * 2, SAMPLE_RATE / 5 * 2)
-        val source = if (speaker) MediaRecorder.AudioSource.VOICE_COMMUNICATION else MediaRecorder.AudioSource.VOICE_RECOGNITION
+        val processed = speaker && echoCancel
+        val source = if (processed) MediaRecorder.AudioSource.VOICE_COMMUNICATION else MediaRecorder.AudioSource.VOICE_RECOGNITION
         val record = try {
             AudioRecord(source, SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, bufBytes)
         } catch (t: Throwable) {
@@ -323,7 +334,7 @@ class OboeAudioRecorder @Inject constructor(
         var agc = false
         effects.forEach { runCatching { it.release() } }
         effects.clear()
-        if (speaker) {
+        if (processed) {
             val session = record.audioSessionId
             fun enable(effect: AudioEffect?): Boolean {
                 if (effect == null) return false
@@ -344,7 +355,7 @@ class OboeAudioRecorder @Inject constructor(
             record.startRecording()
             _state.value = CaptureState(
                 running = true,
-                backend = if (speaker) CaptureBackend.AUDIO_RECORD else CaptureBackend.AUDIO_RECORD_RAW,
+                backend = if (processed) CaptureBackend.AUDIO_RECORD else CaptureBackend.AUDIO_RECORD_RAW,
                 route = route.route, echoCanceller = aec, noiseSuppressor = ns, gainControl = agc,
             )
             record
@@ -379,7 +390,8 @@ class OboeAudioRecorder @Inject constructor(
      */
     fun injectExternal(samples16k: ShortArray, n: Int = samples16k.size) {
         if (n <= 0) return
-        deliver(samples16k, n)
+        // WebRTC's audio processing already applied AGC/NS: deliver as-is.
+        synchronized(deliverLock) { deliverLocked(samples16k, n, normalize = false) }
     }
 
     // ------------------------------------------------------------------------- fan-out
@@ -393,8 +405,9 @@ class OboeAudioRecorder @Inject constructor(
         synchronized(deliverLock) { deliverLocked(buf, n) }
     }
 
-    private fun deliverLocked(buf: ShortArray, n: Int) {
+    private fun deliverLocked(buf: ShortArray, n: Int, normalize: Boolean = true) {
         val chunk = buf.copyOf(n)
+        if (normalize && autoGain) normalizer.process(chunk, n)
         synchronized(recordingLock) { recording?.append(chunk, n) }
         _frames.tryEmit(chunk)
 
