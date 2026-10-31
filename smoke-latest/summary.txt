@@ -6,8 +6,8 @@ Starting: Intent { cmp=com.polylingua.edge/.MainActivity }
 Status: ok
 LaunchState: COLD
 Activity: com.polylingua.edge/.MainActivity
-TotalTime: 2050
-WaitTime: 2062
+TotalTime: 2072
+WaitTime: 2095
 Complete
 screen 01_home: running
 screen 02_setup: running
@@ -21,21 +21,21 @@ screen 09_quiz_flash_packages_: running
 screen 10_dashboard: running
 screen 11_home: running
 == memory
-  Native Heap    30494    30420        0        0    32912    94836    27932    63359
-           Java Heap:    26788                          50148
-         Native Heap:    30420                          32912
-           TOTAL PSS:   104806            TOTAL RSS:   234304      TOTAL SWAP (KB):        0
-Total frames rendered: 224
-Janky frames: 175 (78.12%)
-90th percentile: 73ms
-99th percentile: 150ms
-90th gpu percentile: 24ms
+  Native Heap    28331    28268        0        0    30752    84080    26407    53974
+           Java Heap:    23364                          46692
+         Native Heap:    28268                          30752
+           TOTAL PSS:   100523            TOTAL RSS:   231360      TOTAL SWAP (KB):        0
+Total frames rendered: 230
+Janky frames: 190 (82.61%)
+90th percentile: 81ms
+99th percentile: 200ms
+90th gpu percentile: 23ms
 99th gpu percentile: 4950ms
 == monkey stress (1200 events)
 Events injected: 1200
 :Sending rotation degree=0, persist=false
 :Dropped: keys=0 pointers=0 trackballs=0 flips=7 rotations=0
-## Network stats: elapsed time=52873ms (0ms mobile, 0ms wifi, 52873ms not connected)
+## Network stats: elapsed time=52357ms (0ms mobile, 0ms wifi, 52357ms not connected)
 // Monkey finished
 screen 99_after_monkey: running
 other-process monkey reports (ignored): 0

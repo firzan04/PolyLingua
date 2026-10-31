@@ -1,26 +1,29 @@
-10-30 10:35:48.138  5241  5279 W PolyLinguaNative: On-device AI runtime disabled: arm64 libraries cannot run natively on x86_64
-10-30 10:35:52.682   419   419 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
-10-30 10:36:20.242   419   419 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
-10-30 10:36:27.514   419   419 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
-10-30 10:36:34.780   419   419 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
-10-30 10:36:42.075   419   419 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
-10-30 10:36:45.535   419   419 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
-10-30 10:36:45.966  5751  5771 E libc    : Access denied finding property "persist.adb.tls_server.enable"
-10-30 10:36:45.966  5751  5771 E libc    : Access denied finding property "service.adb.tls.port"
-10-30 10:36:56.633   419   419 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
-10-30 10:37:03.912   419   419 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
-10-30 10:37:11.202   419   419 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
-10-30 10:37:18.479   419   419 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
-10-30 10:37:25.721   419   419 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
-10-30 10:37:28.119  6023  6023 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
-10-30 10:37:28.121  6023  6023 E libc    : Access denied finding property "persist.device_config.runtime_native_boot.profilebootclasspath"
-10-30 10:37:28.121  6023  6023 E libc    : Access denied finding property "persist.device_config.runtime_native_boot.enable_apex_image"
-10-30 10:37:28.121  6023  6023 I AndroidRuntime: Using default boot image
-10-30 10:37:28.121  6023  6023 E libc    : Access denied finding property "persist.device_config.runtime_native_boot.disable_lock_profiling"
-10-30 10:37:28.121  6023  6023 I AndroidRuntime: Leaving lock profiling enabled
-10-30 10:37:28.122  6023  6023 E libc    : Access denied finding property "persist.device_config.runtime_native_boot.enable_generational_cc"
-10-30 10:37:28.191  6023  6023 D AndroidRuntime: Calling main entry com.android.commands.monkey.Monkey
-10-30 10:37:33.210   419   419 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
-10-30 10:38:16.225  5751  5929 E libc    : Access denied finding property "persist.adb.tls_server.enable"
-10-30 10:38:16.225  5751  5929 E libc    : Access denied finding property "service.adb.tls.port"
-10-30 10:38:21.080  6023  6023 I AndroidRuntime: VM exiting with result code 0.
+10-31 02:48:22.097  5306  5339 W PolyLinguaNative: On-device AI runtime disabled: arm64 libraries cannot run natively on x86_64
+10-31 02:48:26.557   415   415 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
+10-31 02:48:49.523  5306  5306 I PolyLinguaTts: Android TTS: Google Text-to-speech Engine (com.google.android.tts), 0 offline voices, locales {en-GB=true, en-US=true, en-AU=true, en-IE=false, en-NZ=false, en-IN=true, id-ID=true}
+10-31 02:48:49.541  5306  5344 I PolyLinguaTts: Android TTS: Google Text-to-speech Engine (com.google.android.tts), 0 offline voices, locales {en-GB=true, en-US=true, en-AU=true, en-IE=false, en-NZ=false, en-IN=true, id-ID=true}
+10-31 02:48:54.135   415   415 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
+10-31 02:49:01.745   415   415 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
+10-31 02:49:09.031   415   415 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
+10-31 02:49:16.317   415   415 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
+10-31 02:49:17.725  2990  3707 E libc    : Access denied finding property "persist.adb.tls_server.enable"
+10-31 02:49:17.725  2990  3707 E libc    : Access denied finding property "service.adb.tls.port"
+10-31 02:49:23.603   415   415 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
+10-31 02:49:30.881   415   415 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
+10-31 02:49:38.177   415   415 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
+10-31 02:49:45.463   415   415 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
+10-31 02:49:52.718   415   415 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
+10-31 02:49:59.979   415   415 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
+10-31 02:50:02.401  5979  5979 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-31 02:50:02.404  5979  5979 E libc    : Access denied finding property "persist.device_config.runtime_native_boot.profilebootclasspath"
+10-31 02:50:02.404  5979  5979 E libc    : Access denied finding property "persist.device_config.runtime_native_boot.enable_apex_image"
+10-31 02:50:02.404  5979  5979 I AndroidRuntime: Using default boot image
+10-31 02:50:02.404  5979  5979 E libc    : Access denied finding property "persist.device_config.runtime_native_boot.disable_lock_profiling"
+10-31 02:50:02.404  5979  5979 I AndroidRuntime: Leaving lock profiling enabled
+10-31 02:50:02.404  5979  5979 E libc    : Access denied finding property "persist.device_config.runtime_native_boot.enable_generational_cc"
+10-31 02:50:02.461  5979  5979 D AndroidRuntime: Calling main entry com.android.commands.monkey.Monkey
+10-31 02:50:02.966  5306  5344 I PolyLinguaTts: Android TTS: Google Text-to-speech Engine (com.google.android.tts), 3 offline voices, locales {en-GB=false, en-US=true, en-AU=false, en-IE=false, en-NZ=false, en-IN=false, id-ID=false}
+10-31 02:50:07.483   415   415 E libc    : The property "ro.build.fingerprint" has a value with length 92 that is too large for __system_property_get()/__system_property_read(); use __system_property_read_callback() instead.
+10-31 02:50:53.713  2990  3707 E libc    : Access denied finding property "persist.adb.tls_server.enable"
+10-31 02:50:53.713  2990  3707 E libc    : Access denied finding property "service.adb.tls.port"
+10-31 02:50:54.838  5979  5979 I AndroidRuntime: VM exiting with result code 0.
