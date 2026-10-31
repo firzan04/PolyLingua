@@ -381,6 +381,11 @@ object BodyLanguageAnalyzer {
     private const val TAG = "PolyLinguaBody"
 
     suspend fun analyze(video: File, stepMs: Long = 1000, onProgress: (Float) -> Unit = {}): BodyLanguageReport? = withContext(Dispatchers.Default) {
+        if (android.os.Build.SUPPORTED_ABIS.firstOrNull()?.startsWith("x86") == true) {
+            // arm64-only native code under binary translation (emulators) is not reliable.
+            DiagLog.w(TAG, "Body-language analysis skipped on ${android.os.Build.SUPPORTED_ABIS.firstOrNull()}")
+            return@withContext null
+        }
         val retriever = MediaMetadataRetriever()
         val detector = FaceDetection.getClient(
             FaceDetectorOptions.Builder()

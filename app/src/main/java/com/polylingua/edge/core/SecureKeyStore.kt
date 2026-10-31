@@ -31,6 +31,9 @@ class SecureKeyStore @Inject constructor(@ApplicationContext context: Context) {
 
     private val prefs = context.getSharedPreferences("polylingua_secrets", Context.MODE_PRIVATE)
 
+    /** Decrypted values cached in memory (Keystore calls are binder IPC; UI reads keys often). */
+    private val cache = HashMap<Slot, String?>()
+
     private val _revision = MutableStateFlow(0)
     /** Increments whenever a key is saved or removed. */
     val revision: StateFlow<Int> = _revision
@@ -51,6 +54,7 @@ class SecureKeyStore @Inject constructor(@ApplicationContext context: Context) {
 
     @Synchronized
     fun put(slot: Slot, value: String?) {
+        cache.remove(slot)
         val v = value?.trim().orEmpty()
         if (v.isEmpty()) {
             prefs.edit().remove(slot.prefKey).apply()
@@ -70,6 +74,13 @@ class SecureKeyStore @Inject constructor(@ApplicationContext context: Context) {
 
     @Synchronized
     fun get(slot: Slot): String? {
+        if (cache.containsKey(slot)) return cache[slot]
+        val value = decrypt(slot)
+        cache[slot] = value
+        return value
+    }
+
+    private fun decrypt(slot: Slot): String? {
         val stored = prefs.getString(slot.prefKey, null) ?: return null
         return try {
             val blob = Base64.decode(stored, Base64.NO_WRAP)

@@ -321,7 +321,7 @@ object ModelCatalog {
     /** Final-transcript (second pass) recognisers, most accurate first. */
     val SECOND_PASS_ASR: List<ModelPack> = listOf(ASR_PARAKEET_06B, ASR_PARAKEET_110M, ASR_MOONSHINE)
 
-    /** The essential offline speaking-assessment bundle (~470 MB download). */
+    /** The essential offline speaking-assessment bundle (~450 MB download). */
     val ESSENTIALS: List<ModelPack> = listOf(VAD_SILERO, ASR_NEMO_STREAMING, PUNCTUATION, ASR_PARAKEET_110M, GOP_CHARSIU, TTS_KOKORO)
 
     val ESSENTIALS_MB: Int get() = ESSENTIALS.sumOf { it.sizeMb }

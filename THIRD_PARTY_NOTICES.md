@@ -15,6 +15,7 @@ licences; their copyright notices are reproduced or referenced here as those lic
 | [Oboe](https://github.com/google/oboe) 1.9.0 | Low-latency full-duplex sidetone | Apache-2.0 |
 | [stream-webrtc-android](https://github.com/GetStream/webrtc-android) 1.2.2 (libwebrtc) | Peer-to-peer calls | Apache-2.0 / BSD-3-Clause (WebRTC) |
 | AndroidX, Jetpack Compose, Media3 ExoPlayer, CameraX, Room, Hilt/Dagger | App framework | Apache-2.0 |
+| [ML Kit Face Detection](https://developers.google.com/ml-kit/vision/face-detection) 16.1.7 (bundled model) | Offline eye-contact / expression analysis of interview videos | [ML Kit Terms of Service](https://developers.google.com/ml-kit/terms) |
 | [OkHttp](https://github.com/square/okhttp) 4.12 | Model downloads, WebSocket signalling | Apache-2.0 |
 | [Apache Commons Compress](https://commons.apache.org/proper/commons-compress/) 1.27.1 | Streaming `.tar.bz2` model extraction | Apache-2.0 |
 | [CMU Pronouncing Dictionary](http://www.speech.cs.cmu.edu/cgi-bin/cmudict) 0.7b | Canonical pronunciations, IPA, stress | BSD-2-Clause style (see `assets/phonetics/CMUDICT_LICENSE.txt`) |
@@ -31,6 +32,9 @@ Models are fetched only when the learner taps *Download* in **Models & settings*
 |---|---|---|
 | Silero VAD | k2-fsa/sherpa-onnx releases | MIT |
 | Streaming Zipformer EN 20M | k2-fsa/sherpa-onnx releases | Apache-2.0 |
+| NeMo FastConformer streaming transducer EN 480 ms (int8) | k2-fsa/sherpa-onnx releases (NVIDIA NeMo export) | CC-BY-4.0 |
+| Nemotron Speech Streaming EN 0.6B (int8) | k2-fsa/sherpa-onnx releases (NVIDIA export) | NVIDIA Open Model License |
+| Parakeet TDT 0.6B v2 (int8), Parakeet TDT-CTC 110M (int8) | k2-fsa/sherpa-onnx releases (NVIDIA NeMo export) | CC-BY-4.0 |
 | Moonshine Tiny EN (int8) | k2-fsa/sherpa-onnx releases | MIT |
 | Online punctuation EN | k2-fsa/sherpa-onnx releases | Apache-2.0 |
 | Kokoro 82M v0.19 (int8) | k2-fsa/sherpa-onnx releases | Apache-2.0 |
@@ -39,6 +43,12 @@ Models are fetched only when the learner taps *Download* in **Models & settings*
 | charsiu wav2vec2 phone classifier (int8 ONNX) | huggingface.co/mnaoizyyy/charsiu-js-models | MIT |
 | Qwen2.5-1.5B-Instruct Q4_0 GGUF | huggingface.co/bartowski | Apache-2.0 |
 | SmolLM2-360M-Instruct Q8_0 GGUF | huggingface.co/bartowski | Apache-2.0 |
+
+## Cloud services (optional, only with your own API key)
+
+Google Gemini API, Anthropic Claude API and OpenAI-compatible endpoints are called only when the
+learner selects them and provides a key; their own terms and pricing apply. Keys are stored
+encrypted on the device (Android Keystore) and are sent only to the chosen provider.
 
 ## Assessment content
 
